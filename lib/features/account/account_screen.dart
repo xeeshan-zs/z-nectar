@@ -1,12 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:grocery_app/core/theme/app_colors.dart';
 import 'package:grocery_app/core/constants/app_constants.dart';
+import 'package:grocery_app/core/widgets/placeholder_screen.dart';
+import 'package:grocery_app/features/auth/auth_service.dart';
+import 'package:grocery_app/features/auth/splash_screen.dart';
+import 'package:grocery_app/features/location/location_selection_screen.dart';
 
 class AccountScreen extends StatelessWidget {
   const AccountScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
+    final user = AuthService.instance.currentUser;
+    final displayName = user?.displayName ?? 'Grocery User';
+    final contactInfo = user?.email ?? user?.phoneNumber ?? 'Not available';
+
     return SafeArea(
       child: SingleChildScrollView(
         child: Column(
@@ -27,8 +35,19 @@ class AccountScreen extends StatelessWidget {
                       color: AppColors.lightGrey,
                       border: Border.all(color: AppColors.borderGrey, width: 1),
                     ),
-                    child: const Icon(Icons.person,
-                        color: AppColors.primaryGreen, size: 35),
+                    child: user?.photoURL != null
+                        ? ClipOval(
+                            child: Image.network(
+                              user!.photoURL!,
+                              fit: BoxFit.cover,
+                              errorBuilder: (_, __, ___) => const Icon(
+                                  Icons.person,
+                                  color: AppColors.primaryGreen,
+                                  size: 35),
+                            ),
+                          )
+                        : const Icon(Icons.person,
+                            color: AppColors.primaryGreen, size: 35),
                   ),
                   const SizedBox(width: 18),
                   // Name & Email
@@ -38,27 +57,34 @@ class AccountScreen extends StatelessWidget {
                       children: [
                         Row(
                           children: [
-                            const Text(
-                              'Afsar Hossen',
-                              style: TextStyle(
-                                fontSize: 20,
-                                fontWeight: FontWeight.bold,
-                                color: AppColors.darkText,
+                            Flexible(
+                              child: Text(
+                                displayName,
+                                style: const TextStyle(
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.bold,
+                                  color: AppColors.darkText,
+                                ),
+                                overflow: TextOverflow.ellipsis,
                               ),
                             ),
                             const SizedBox(width: 8),
-                            Icon(Icons.edit_outlined,
-                                color: AppColors.primaryGreen, size: 18),
+                            GestureDetector(
+                              onTap: () => _showEditNameDialog(context),
+                              child: const Icon(Icons.edit_outlined,
+                                  color: AppColors.primaryGreen, size: 18),
+                            ),
                           ],
                         ),
                         const SizedBox(height: 4),
-                        const Text(
-                          'Imshuvo97@gmail.com',
-                          style: TextStyle(
+                        Text(
+                          contactInfo,
+                          style: const TextStyle(
                             fontSize: 16,
                             color: AppColors.greyText,
                             fontWeight: FontWeight.w500,
                           ),
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ],
                     ),
@@ -69,14 +95,17 @@ class AccountScreen extends StatelessWidget {
             const SizedBox(height: 25),
             const Divider(),
             // Menu Items
-            _buildMenuItem(Icons.shopping_bag_outlined, 'Orders'),
-            _buildMenuItem(Icons.badge_outlined, 'My Details'),
-            _buildMenuItem(Icons.location_on_outlined, 'Delivery Address'),
-            _buildMenuItem(Icons.payment_outlined, 'Payment Methods'),
-            _buildMenuItem(Icons.local_offer_outlined, 'Promo Code'),
-            _buildMenuItem(Icons.notifications_outlined, 'Notifications'),
-            _buildMenuItem(Icons.help_outline, 'Help'),
-            _buildMenuItem(Icons.info_outline, 'About'),
+            _buildMenuItem(context, Icons.shopping_bag_outlined, 'Orders'),
+            _buildMenuItem(context, Icons.badge_outlined, 'My Details'),
+            _buildLocationMenuItem(context), // Special case for location
+            _buildMenuItem(
+                context, Icons.payment_outlined, 'Payment Methods'),
+            _buildMenuItem(
+                context, Icons.local_offer_outlined, 'Promo Code'),
+            _buildMenuItem(
+                context, Icons.notifications_outlined, 'Notifications'),
+            _buildMenuItem(context, Icons.help_outline, 'Help'),
+            _buildMenuItem(context, Icons.info_outline, 'About'),
             const SizedBox(height: 30),
             // Log Out Button
             Padding(
@@ -86,7 +115,7 @@ class AccountScreen extends StatelessWidget {
                 width: double.infinity,
                 height: 60,
                 child: OutlinedButton.icon(
-                  onPressed: () {},
+                  onPressed: () => _logout(context),
                   icon: const Icon(Icons.logout,
                       color: AppColors.primaryGreen, size: 22),
                   label: const Text(
@@ -98,7 +127,8 @@ class AccountScreen extends StatelessWidget {
                     ),
                   ),
                   style: OutlinedButton.styleFrom(
-                    side: const BorderSide(color: AppColors.lightGrey, width: 1),
+                    side:
+                        const BorderSide(color: AppColors.lightGrey, width: 1),
                     backgroundColor: AppColors.lightGrey,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(19),
@@ -114,33 +144,220 @@ class AccountScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildMenuItem(IconData icon, String title) {
+  Widget _buildLocationMenuItem(BuildContext context) {
     return Column(
       children: [
-        Padding(
-          padding: const EdgeInsets.symmetric(
-              horizontal: AppConstants.horizontalPadding, vertical: 16),
-          child: Row(
-            children: [
-              Icon(icon, color: AppColors.darkText, size: 24),
-              const SizedBox(width: 18),
-              Expanded(
-                child: Text(
-                  title,
-                  style: const TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.darkText,
+        InkWell(
+          onTap: () {
+            Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (_) => const LocationSelectionScreen(),
+              ),
+            );
+          },
+          child: Padding(
+            padding: const EdgeInsets.symmetric(
+                horizontal: AppConstants.horizontalPadding, vertical: 16),
+            child: Row(
+              children: [
+                 Icon(Icons.location_on_outlined, color: AppColors.darkText, size: 24),
+                const SizedBox(width: 18),
+                const Expanded(
+                  child: Text(
+                    'Delivery Address',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.darkText,
+                    ),
                   ),
                 ),
-              ),
-              const Icon(Icons.chevron_right,
-                  color: AppColors.darkText, size: 24),
-            ],
+                const Icon(Icons.chevron_right,
+                    color: AppColors.darkText, size: 24),
+              ],
+            ),
           ),
         ),
         const Divider(),
       ],
+    );
+  }
+
+  Widget _buildMenuItem(BuildContext context, IconData icon, String title) {
+    return Column(
+      children: [
+        InkWell(
+          onTap: () {
+            Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (_) => PlaceholderScreen(title: title),
+              ),
+            );
+          },
+          child: Padding(
+            padding: const EdgeInsets.symmetric(
+                horizontal: AppConstants.horizontalPadding, vertical: 16),
+            child: Row(
+              children: [
+                Icon(icon, color: AppColors.darkText, size: 24),
+                const SizedBox(width: 18),
+                Expanded(
+                  child: Text(
+                    title,
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.darkText,
+                    ),
+                  ),
+                ),
+                const Icon(Icons.chevron_right,
+                    color: AppColors.darkText, size: 24),
+              ],
+            ),
+          ),
+        ),
+        const Divider(),
+      ],
+    );
+  }
+
+  void _showEditNameDialog(BuildContext context) {
+    final controller = TextEditingController(
+      text: AuthService.instance.currentUser?.displayName ?? '',
+    );
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppColors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text(
+          'Edit Name',
+          style: TextStyle(
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+            color: AppColors.darkText,
+          ),
+        ),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          style: const TextStyle(
+            fontSize: 15,
+            fontWeight: FontWeight.w500,
+            color: AppColors.darkText,
+          ),
+          decoration: InputDecoration(
+            hintText: 'Enter your name',
+            hintStyle: const TextStyle(
+              color: AppColors.lightGreyText,
+              fontWeight: FontWeight.w400,
+            ),
+            filled: true,
+            fillColor: AppColors.lightGrey,
+            contentPadding:
+                const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide.none,
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide:
+                  const BorderSide(color: AppColors.primaryGreen, width: 1.5),
+            ),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text(
+              'Cancel',
+              style: TextStyle(color: AppColors.greyText),
+            ),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              final name = controller.text.trim();
+              if (name.isNotEmpty) {
+                await AuthService.instance.currentUser
+                    ?.updateDisplayName(name);
+                // Reload to pick up the change
+                await AuthService.instance.currentUser?.reload();
+              }
+              if (ctx.mounted) {
+                Navigator.of(ctx).pop();
+              }
+              // Force a rebuild of the parent to show the new name
+              if (context.mounted) {
+                (context as Element).markNeedsBuild();
+              }
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.primaryGreen,
+              foregroundColor: AppColors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _logout(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppColors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text(
+          'Log Out',
+          style: TextStyle(
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+            color: AppColors.darkText,
+          ),
+        ),
+        content: const Text(
+          'Are you sure you want to log out?',
+          style: TextStyle(
+            fontSize: 15,
+            color: AppColors.greyText,
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text(
+              'Cancel',
+              style: TextStyle(color: AppColors.greyText),
+            ),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              await AuthService.instance.logout();
+              if (context.mounted) {
+                Navigator.of(context).pushAndRemoveUntil(
+                  MaterialPageRoute(builder: (_) => const SplashScreen()),
+                  (_) => false,
+                );
+              }
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.redAccent,
+              foregroundColor: AppColors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+            child: const Text('Log Out'),
+          ),
+        ],
+      ),
     );
   }
 }

@@ -1,0 +1,112 @@
+> Task :gradle:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :gradle:compileKotlin UP-TO-DATE
+> Task :gradle:compileJava NO-SOURCE
+> Task :gradle:compileGroovy NO-SOURCE
+> Task :gradle:pluginDescriptors UP-TO-DATE
+> Task :gradle:processResources UP-TO-DATE
+> Task :gradle:classes UP-TO-DATE
+> Task :gradle:jar UP-TO-DATE
+
+> Task :app:signingReport
+Variant: debug
+Config: debug
+Store: C:\Users\Shani\.android\debug.keystore
+Alias: AndroidDebugKey
+MD5: 4F:F5:A8:76:41:BD:45:E3:E1:51:AD:8C:2D:99:CD:19
+SHA1: 8F:4E:31:DB:38:42:EE:0B:E8:E4:26:AB:8E:BF:9A:AF:BE:2B:72:A6
+SHA-256: FC:0B:A4:06:E8:C6:93:27:5B:83:43:6A:A0:3B:1F:87:27:89:E9:2D:6B:FD:3D:6F:6D:56:B8:5C:9A:E0:5A:E4
+Valid until: Sunday, January 9, 2056
+----------
+Variant: release
+Config: debug
+Store: C:\Users\Shani\.android\debug.keystore
+Alias: AndroidDebugKey
+MD5: 4F:F5:A8:76:41:BD:45:E3:E1:51:AD:8C:2D:99:CD:19
+SHA1: 8F:4E:31:DB:38:42:EE:0B:E8:E4:26:AB:8E:BF:9A:AF:BE:2B:72:A6
+SHA-256: FC:0B:A4:06:E8:C6:93:27:5B:83:43:6A:A0:3B:1F:87:27:89:E9:2D:6B:FD:3D:6F:6D:56:B8:5C:9A:E0:5A:E4
+Valid until: Sunday, January 9, 2056
+----------
+Variant: profile
+Config: debug
+Store: C:\Users\Shani\.android\debug.keystore
+Alias: AndroidDebugKey
+MD5: 4F:F5:A8:76:41:BD:45:E3:E1:51:AD:8C:2D:99:CD:19
+SHA1: 8F:4E:31:DB:38:42:EE:0B:E8:E4:26:AB:8E:BF:9A:AF:BE:2B:72:A6
+SHA-256: FC:0B:A4:06:E8:C6:93:27:5B:83:43:6A:A0:3B:1F:87:27:89:E9:2D:6B:FD:3D:6F:6D:56:B8:5C:9A:E0:5A:E4
+Valid until: Sunday, January 9, 2056
+----------
+Variant: debugAndroidTest
+Config: debug
+Store: C:\Users\Shani\.android\debug.keystore
+Alias: AndroidDebugKey
+MD5: 4F:F5:A8:76:41:BD:45:E3:E1:51:AD:8C:2D:99:CD:19
+SHA1: 8F:4E:31:DB:38:42:EE:0B:E8:E4:26:AB:8E:BF:9A:AF:BE:2B:72:A6
+SHA-256: FC:0B:A4:06:E8:C6:93:27:5B:83:43:6A:A0:3B:1F:87:27:89:E9:2D:6B:FD:3D:6F:6D:56:B8:5C:9A:E0:5A:E4
+Valid until: Sunday, January 9, 2056
+----------
+
+> Task :cloud_firestore:signingReport
+Variant: debugAndroidTest
+Config: debug
+Store: C:\Users\Shani\.android\debug.keystore
+Alias: AndroidDebugKey
+MD5: 4F:F5:A8:76:41:BD:45:E3:E1:51:AD:8C:2D:99:CD:19
+SHA1: 8F:4E:31:DB:38:42:EE:0B:E8:E4:26:AB:8E:BF:9A:AF:BE:2B:72:A6
+SHA-256: FC:0B:A4:06:E8:C6:93:27:5B:83:43:6A:A0:3B:1F:87:27:89:E9:2D:6B:FD:3D:6F:6D:56:B8:5C:9A:E0:5A:E4
+Valid until: Sunday, January 9, 2056
+----------
+
+> Task :firebase_auth:signingReport
+Variant: debugAndroidTest
+Config: debug
+Store: C:\Users\Shani\.android\debug.keystore
+Alias: AndroidDebugKey
+MD5: 4F:F5:A8:76:41:BD:45:E3:E1:51:AD:8C:2D:99:CD:19
+SHA1: 8F:4E:31:DB:38:42:EE:0B:E8:E4:26:AB:8E:BF:9A:AF:BE:2B:72:A6
+SHA-256: FC:0B:A4:06:E8:C6:93:27:5B:83:43:6A:A0:3B:1F:87:27:89:E9:2D:6B:FD:3D:6F:6D:56:B8:5C:9A:E0:5A:E4
+Valid until: Sunday, January 9, 2056
+----------
+
+> Task :firebase_core:signingReport
+Variant: debugAndroidTest
+Config: debug
+Store: C:\Users\Shani\.android\debug.keystore
+Alias: AndroidDebugKey
+MD5: 4F:F5:A8:76:41:BD:45:E3:E1:51:AD:8C:2D:99:CD:19
+SHA1: 8F:4E:31:DB:38:42:EE:0B:E8:E4:26:AB:8E:BF:9A:AF:BE:2B:72:A6
+SHA-256: FC:0B:A4:06:E8:C6:93:27:5B:83:43:6A:A0:3B:1F:87:27:89:E9:2D:6B:FD:3D:6F:6D:56:B8:5C:9A:E0:5A:E4
+Valid until: Sunday, January 9, 2056
+----------
+
+> Task :path_provider_android:signingReport
+Variant: debugAndroidTest
+Config: debug
+Store: C:\Users\Shani\.android\debug.keystore
+Alias: AndroidDebugKey
+MD5: 4F:F5:A8:76:41:BD:45:E3:E1:51:AD:8C:2D:99:CD:19
+SHA1: 8F:4E:31:DB:38:42:EE:0B:E8:E4:26:AB:8E:BF:9A:AF:BE:2B:72:A6
+SHA-256: FC:0B:A4:06:E8:C6:93:27:5B:83:43:6A:A0:3B:1F:87:27:89:E9:2D:6B:FD:3D:6F:6D:56:B8:5C:9A:E0:5A:E4
+Valid until: Sunday, January 9, 2056
+----------
+
+> Task :sqflite_android:signingReport
+Variant: debugAndroidTest
+Config: debug
+Store: C:\Users\Shani\.android\debug.keystore
+Alias: AndroidDebugKey
+MD5: 4F:F5:A8:76:41:BD:45:E3:E1:51:AD:8C:2D:99:CD:19
+SHA1: 8F:4E:31:DB:38:42:EE:0B:E8:E4:26:AB:8E:BF:9A:AF:BE:2B:72:A6
+SHA-256: FC:0B:A4:06:E8:C6:93:27:5B:83:43:6A:A0:3B:1F:87:27:89:E9:2D:6B:FD:3D:6F:6D:56:B8:5C:9A:E0:5A:E4
+Valid until: Sunday, January 9, 2056
+----------
+
+[Incubating] Problems report is available at: file:///C:/Users/Shani/IdeaProjects/Grocery_app/build/reports/problems/problems-report.html
+
+Deprecated Gradle features were used in this build, making it incompatible with Gradle 9.0.
+
+You can use '--warning-mode all' to show the individual deprecation warnings and determine if they come from your own scripts or plugins.
+
+For more on this, please refer to https://docs.gradle.org/8.12/userguide/command_line_interface.html#sec:command_line_warnings in the Gradle documentation.
+
+BUILD SUCCESSFUL in 2s
+10 actionable tasks: 6 executed, 4 up-to-date
