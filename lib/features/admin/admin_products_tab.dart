@@ -12,6 +12,7 @@ class AdminProductsTab extends StatelessWidget {
     return Scaffold(
       backgroundColor: const Color(0xFFF6F6F8),
       floatingActionButton: FloatingActionButton.extended(
+        heroTag: 'addProduct',
         onPressed: () {
           Navigator.of(context).push(
             MaterialPageRoute(builder: (_) => const AddEditProductScreen()),
@@ -146,6 +147,49 @@ class AdminProductsTab extends StatelessWidget {
                     ),
                   ),
                 ),
+                if (product.isCarousel || product.isFeatured)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 4),
+                    child: Wrap(
+                      spacing: 6,
+                      children: [
+                        if (product.isCarousel)
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: Colors.blue.withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: const Text(
+                              '🎠 Carousel',
+                              style: TextStyle(
+                                fontSize: 10,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.blue,
+                              ),
+                            ),
+                          ),
+                        if (product.isFeatured)
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: Colors.purple.withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: const Text(
+                              '⭐ Featured',
+                              style: TextStyle(
+                                fontSize: 10,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.purple,
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
               ],
             ),
           ),
@@ -166,6 +210,14 @@ class AdminProductsTab extends StatelessWidget {
                   ProductService.instance
                       .toggleStock(product.id, !product.inStock);
                   break;
+                case 'carousel':
+                  ProductService.instance
+                      .toggleCarousel(product.id, !product.isCarousel);
+                  break;
+                case 'featured':
+                  ProductService.instance
+                      .toggleFeatured(product.id, !product.isFeatured);
+                  break;
                 case 'delete':
                   _confirmDelete(context, product);
                   break;
@@ -179,6 +231,18 @@ class AdminProductsTab extends StatelessWidget {
                 child: Text(product.inStock
                     ? 'Mark Out of Stock'
                     : 'Mark In Stock'),
+              ),
+              PopupMenuItem(
+                value: 'carousel',
+                child: Text(product.isCarousel
+                    ? 'Remove from Carousel'
+                    : 'Add to Carousel'),
+              ),
+              PopupMenuItem(
+                value: 'featured',
+                child: Text(product.isFeatured
+                    ? 'Remove from Featured'
+                    : 'Add to Featured'),
               ),
               const PopupMenuItem(
                 value: 'delete',

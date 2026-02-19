@@ -10,6 +10,8 @@ class ProductModel {
   final String categoryId;
   final bool inStock;
   final bool isExclusive;
+  final bool isCarousel;
+  final bool isFeatured;
   final int salesCount;
 
   const ProductModel({
@@ -24,6 +26,8 @@ class ProductModel {
     required this.categoryId,
     this.inStock = true,
     this.isExclusive = false,
+    this.isCarousel = false,
+    this.isFeatured = false,
     this.salesCount = 0,
   });
 
@@ -40,6 +44,8 @@ class ProductModel {
       categoryId: map['categoryId'] as String? ?? '',
       inStock: map['inStock'] as bool? ?? true,
       isExclusive: map['isExclusive'] as bool? ?? false,
+      isCarousel: map['isCarousel'] as bool? ?? false,
+      isFeatured: map['isFeatured'] as bool? ?? false,
       salesCount: (map['salesCount'] as num?)?.toInt() ?? 0,
     );
   }
@@ -56,6 +62,8 @@ class ProductModel {
       'categoryId': categoryId,
       'inStock': inStock,
       'isExclusive': isExclusive,
+      'isCarousel': isCarousel,
+      'isFeatured': isFeatured,
       'salesCount': salesCount,
     };
   }

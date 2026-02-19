@@ -172,6 +172,7 @@ class _AdminBannersTabState extends State<AdminBannersTab> {
         },
       ),
       floatingActionButton: FloatingActionButton(
+        heroTag: 'addBanner',
         onPressed: () => _showAddEditDialog(),
         backgroundColor: AppColors.primaryGreen,
         child: const Icon(Icons.add, color: AppColors.white),

@@ -36,12 +36,14 @@ class _MapPickerScreenState extends State<MapPickerScreen> {
 
   /// Try to get current device location
   Future<void> _getCurrentLocation() async {
+    if (!mounted) return;
     setState(() => _isLoading = true);
     try {
       LocationPermission permission = await Geolocator.checkPermission();
       if (permission == LocationPermission.denied) {
         permission = await Geolocator.requestPermission();
       }
+      if (!mounted) return;
       if (permission == LocationPermission.denied ||
           permission == LocationPermission.deniedForever) {
         // Use default location
@@ -55,6 +57,7 @@ class _MapPickerScreenState extends State<MapPickerScreen> {
           timeLimit: Duration(seconds: 5),
         ),
       );
+      if (!mounted) return;
       final latLng = LatLng(position.latitude, position.longitude);
       setState(() => _selectedLatLng = latLng);
 
@@ -83,13 +86,15 @@ class _MapPickerScreenState extends State<MapPickerScreen> {
           p.locality,
           p.administrativeArea,
         ].where((s) => s != null && s.isNotEmpty);
-        setState(() {
-          _selectedAddress =
-              parts.isNotEmpty ? parts.join(', ') : 'Unknown location';
-        });
+        if (mounted) {
+          setState(() {
+            _selectedAddress =
+                parts.isNotEmpty ? parts.join(', ') : 'Unknown location';
+          });
+        }
       }
     } catch (_) {
-      setState(() => _selectedAddress = 'Could not determine address');
+      if (mounted) setState(() => _selectedAddress = 'Could not determine address');
     }
   }
 
@@ -135,25 +140,7 @@ class _MapPickerScreenState extends State<MapPickerScreen> {
       body: Stack(
         children: [
           // ── Google Map ──────────────────────────────────────────────────
-          GoogleMap(
-            initialCameraPosition: CameraPosition(
-              target: _selectedLatLng,
-              zoom: 15,
-            ),
-            onMapCreated: (controller) {
-              _mapController.complete(controller);
-            },
-            onCameraMove: (position) {
-              _selectedLatLng = position.target;
-            },
-            onCameraIdle: () {
-              _reverseGeocode(_selectedLatLng);
-            },
-            myLocationEnabled: true,
-            myLocationButtonEnabled: false,
-            zoomControlsEnabled: false,
-            mapToolbarEnabled: false,
-          ),
+          _buildMap(),
 
           // ── Center Pin ─────────────────────────────────────────────────
           const Center(
@@ -314,5 +301,67 @@ class _MapPickerScreenState extends State<MapPickerScreen> {
         ],
       ),
     );
+  }
+
+  /// Builds the Google Map widget with error handling for web
+  Widget _buildMap() {
+    try {
+      return GoogleMap(
+        initialCameraPosition: CameraPosition(
+          target: _selectedLatLng,
+          zoom: 15,
+        ),
+        onMapCreated: (controller) {
+          if (!_mapController.isCompleted) {
+            _mapController.complete(controller);
+          }
+        },
+        onCameraMove: (position) {
+          _selectedLatLng = position.target;
+        },
+        onCameraIdle: () {
+          _reverseGeocode(_selectedLatLng);
+        },
+        myLocationEnabled: true,
+        myLocationButtonEnabled: false,
+        zoomControlsEnabled: false,
+        mapToolbarEnabled: false,
+      );
+    } catch (e) {
+      return Container(
+        color: AppColors.lightGrey,
+        child: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(32),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.map_outlined,
+                    size: 64, color: AppColors.greyText),
+                const SizedBox(height: 16),
+                const Text(
+                  'Google Maps could not be loaded',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.darkText,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Please check your internet connection\nor Google Maps API key configuration.\n\nError: $e',
+                  style: const TextStyle(
+                    fontSize: 14,
+                    color: AppColors.greyText,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
   }
 }

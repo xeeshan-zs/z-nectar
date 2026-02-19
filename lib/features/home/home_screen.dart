@@ -107,6 +107,43 @@ class _HomeScreenState extends State<HomeScreen> {
             _buildBannerCarousel(),
             const SizedBox(height: 25),
 
+            // ── Product Carousel (admin-flagged carousel products) ────────
+            _buildProductCarousel(),
+            const SizedBox(height: 25),
+
+            // ── Featured Products Section ─────────────────────────────────
+            _buildSectionHeader('Featured Products'),
+            const SizedBox(height: 16),
+            StreamBuilder<List<ProductModel>>(
+              stream: ProductService.instance.getFeaturedProducts(),
+              builder: (context, snapshot) {
+                if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                  return const SizedBox(
+                    height: 60,
+                    child: Center(
+                      child: Text('No featured products yet',
+                          style: TextStyle(color: AppColors.greyText)),
+                    ),
+                  );
+                }
+                final products = snapshot.data!;
+                return SizedBox(
+                  height: AppConstants.productCardHeight,
+                  child: ListView.separated(
+                    scrollDirection: Axis.horizontal,
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: AppConstants.horizontalPadding),
+                    itemCount: products.length,
+                    separatorBuilder: (_, __) => const SizedBox(width: 15),
+                    itemBuilder: (context, index) {
+                      return ProductCard(product: products[index]);
+                    },
+                  ),
+                );
+              },
+            ),
+            const SizedBox(height: 25),
+
             // ── Exclusive Offer Section (from Firestore) ─────────────────
             _buildSectionHeader('Exclusive Offer'),
             const SizedBox(height: 16),
@@ -277,6 +314,125 @@ class _HomeScreenState extends State<HomeScreen> {
           }),
         ),
       ],
+    );
+  }
+
+  // ── Product Carousel (Carousel-flagged products) ──────────────────────
+  Widget _buildProductCarousel() {
+    return StreamBuilder<List<ProductModel>>(
+      stream: ProductService.instance.getCarouselProducts(),
+      builder: (context, snapshot) {
+        if (!snapshot.hasData || snapshot.data!.isEmpty) {
+          return const SizedBox.shrink();
+        }
+        final products = snapshot.data!;
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _buildSectionHeader('Top Picks'),
+            const SizedBox(height: 16),
+            Padding(
+              padding: const EdgeInsets.symmetric(
+                  horizontal: AppConstants.horizontalPadding),
+              child: CarouselSlider(
+                options: CarouselOptions(
+                  height: 180,
+                  viewportFraction: 0.85,
+                  enlargeCenterPage: true,
+                  autoPlay: products.length > 1,
+                  autoPlayInterval: const Duration(seconds: 5),
+                ),
+                items: products.map((product) {
+                  return GestureDetector(
+                    onTap: () {
+                      // Navigate to product detail if needed
+                    },
+                    child: Container(
+                      width: double.infinity,
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(16),
+                        color: AppColors.white,
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.08),
+                            blurRadius: 12,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
+                      ),
+                      child: Row(
+                        children: [
+                          ClipRRect(
+                            borderRadius: const BorderRadius.only(
+                              topLeft: Radius.circular(16),
+                              bottomLeft: Radius.circular(16),
+                            ),
+                            child: Image.network(
+                              product.imageUrl,
+                              width: 140,
+                              height: 180,
+                              fit: BoxFit.cover,
+                              errorBuilder: (_, __, ___) => Container(
+                                width: 140,
+                                height: 180,
+                                color: AppColors.lightGrey,
+                                child: const Icon(Icons.image,
+                                    color: AppColors.greyText, size: 40),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: Padding(
+                              padding:
+                                  const EdgeInsets.symmetric(vertical: 20),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                mainAxisAlignment:
+                                    MainAxisAlignment.center,
+                                children: [
+                                  Text(
+                                    product.name,
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: const TextStyle(
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.bold,
+                                      color: AppColors.darkText,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 6),
+                                  Text(
+                                    product.unit,
+                                    style: const TextStyle(
+                                      fontSize: 13,
+                                      color: AppColors.greyText,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 12),
+                                  Text(
+                                    '\$${product.price.toStringAsFixed(2)}',
+                                    style: const TextStyle(
+                                      fontSize: 20,
+                                      fontWeight: FontWeight.bold,
+                                      color: AppColors.primaryGreen,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                        ],
+                      ),
+                    ),
+                  );
+                }).toList(),
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 

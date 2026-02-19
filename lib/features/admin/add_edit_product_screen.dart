@@ -23,6 +23,8 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
   late final TextEditingController _nutritionCtrl;
   late bool _inStock;
   late bool _isExclusive;
+  late bool _isCarousel;
+  late bool _isFeatured;
   bool _loading = false;
 
   bool get _isEdit => widget.product != null;
@@ -42,6 +44,8 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
         TextEditingController(text: p?.nutritionWeight ?? '100gr');
     _inStock = p?.inStock ?? true;
     _isExclusive = p?.isExclusive ?? false;
+    _isCarousel = p?.isCarousel ?? false;
+    _isFeatured = p?.isFeatured ?? false;
   }
 
   @override
@@ -71,6 +75,8 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
       nutritionWeight: _nutritionCtrl.text.trim(),
       inStock: _inStock,
       isExclusive: _isExclusive,
+      isCarousel: _isCarousel,
+      isFeatured: _isFeatured,
       salesCount: widget.product?.salesCount ?? 0,
     );
 
@@ -195,6 +201,56 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
                       value: _isExclusive,
                       activeTrackColor: Colors.orange,
                       onChanged: (v) => setState(() => _isExclusive = v),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 12),
+              // Show in Carousel Toggle
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                decoration: BoxDecoration(
+                  color: AppColors.lightGrey,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text('Show in Carousel',
+                        style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.darkText)),
+                    Switch(
+                      value: _isCarousel,
+                      activeTrackColor: Colors.blue,
+                      onChanged: (v) => setState(() => _isCarousel = v),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 12),
+              // Featured Product Toggle
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                decoration: BoxDecoration(
+                  color: AppColors.lightGrey,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text('Featured Product',
+                        style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.darkText)),
+                    Switch(
+                      value: _isFeatured,
+                      activeTrackColor: Colors.purple,
+                      onChanged: (v) => setState(() => _isFeatured = v),
                     ),
                   ],
                 ),

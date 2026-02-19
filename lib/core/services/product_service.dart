@@ -91,6 +91,42 @@ class ProductService {
     await _col.doc(id).update({'isExclusive': isExclusive});
   }
 
+  /// Stream carousel products (admin-flagged)
+  Stream<List<ProductModel>> getCarouselProducts() {
+    return _col
+        .where('isCarousel', isEqualTo: true)
+        .where('inStock', isEqualTo: true)
+        .snapshots()
+        .map((snap) {
+      return snap.docs
+          .map((d) => ProductModel.fromMap(d.id, d.data()))
+          .toList();
+    });
+  }
+
+  /// Stream featured products (admin-flagged)
+  Stream<List<ProductModel>> getFeaturedProducts() {
+    return _col
+        .where('isFeatured', isEqualTo: true)
+        .where('inStock', isEqualTo: true)
+        .snapshots()
+        .map((snap) {
+      return snap.docs
+          .map((d) => ProductModel.fromMap(d.id, d.data()))
+          .toList();
+    });
+  }
+
+  /// Toggle carousel status
+  Future<void> toggleCarousel(String id, bool isCarousel) async {
+    await _col.doc(id).update({'isCarousel': isCarousel});
+  }
+
+  /// Toggle featured status
+  Future<void> toggleFeatured(String id, bool isFeatured) async {
+    await _col.doc(id).update({'isFeatured': isFeatured});
+  }
+
   /// Get product count
   Future<int> getProductCount() async {
     final snap = await _col.count().get();
