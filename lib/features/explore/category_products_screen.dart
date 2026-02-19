@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:grocery_app/core/theme/app_colors.dart';
 import 'package:grocery_app/core/constants/app_constants.dart';
+import 'package:grocery_app/core/services/product_service.dart';
 import 'package:grocery_app/core/widgets/product_card.dart';
-import 'package:grocery_app/data/dummy_data.dart';
 import 'package:grocery_app/data/models/category_model.dart';
+import 'package:grocery_app/data/models/product_model.dart';
 
 class CategoryProductsScreen extends StatelessWidget {
   final CategoryModel category;
@@ -12,8 +13,6 @@ class CategoryProductsScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final products = DummyData.getProductsByCategory(category.id);
-
     return Scaffold(
       backgroundColor: AppColors.white,
       appBar: AppBar(
@@ -39,29 +38,50 @@ class CategoryProductsScreen extends StatelessWidget {
           ),
         ],
       ),
-      body: products.isEmpty
-          ? const Center(
-              child: Text(
-                'No products found',
-                style: TextStyle(
-                  fontSize: 16,
-                  color: AppColors.greyText,
-                ),
+      body: StreamBuilder<List<ProductModel>>(
+        stream: ProductService.instance.getByCategory(category.id),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(
+              child: CircularProgressIndicator(color: AppColors.primaryGreen),
+            );
+          }
+
+          final products = snapshot.data ?? [];
+
+          if (products.isEmpty) {
+            return Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.category_outlined,
+                      size: 64,
+                      color: AppColors.greyText.withValues(alpha: 0.4)),
+                  const SizedBox(height: 12),
+                  const Text(
+                    'No products found',
+                    style: TextStyle(fontSize: 16, color: AppColors.greyText),
+                  ),
+                ],
               ),
-            )
-          : GridView.builder(
-              padding: const EdgeInsets.all(AppConstants.horizontalPadding),
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 2,
-                childAspectRatio: 0.68,
-                crossAxisSpacing: 15,
-                mainAxisSpacing: 15,
-              ),
-              itemCount: products.length,
-              itemBuilder: (context, index) {
-                return ProductCard(product: products[index]);
-              },
+            );
+          }
+
+          return GridView.builder(
+            padding: const EdgeInsets.all(AppConstants.horizontalPadding),
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 2,
+              childAspectRatio: 0.68,
+              crossAxisSpacing: 15,
+              mainAxisSpacing: 15,
             ),
+            itemCount: products.length,
+            itemBuilder: (context, index) {
+              return ProductCard(product: products[index]);
+            },
+          );
+        },
+      ),
     );
   }
 }

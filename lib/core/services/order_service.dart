@@ -9,10 +9,16 @@ class OrderService {
 
   /// Stream all orders (newest first)
   Stream<List<OrderModel>> getAllOrders() {
-    return _col.orderBy('createdAt', descending: true).snapshots().map((snap) {
-      return snap.docs
+    return _col.snapshots().map((snap) {
+      final list = snap.docs
           .map((d) => OrderModel.fromMap(d.id, d.data()))
           .toList();
+      list.sort((a, b) {
+        final aTime = a.createdAt?.millisecondsSinceEpoch ?? 0;
+        final bTime = b.createdAt?.millisecondsSinceEpoch ?? 0;
+        return bTime.compareTo(aTime); // newest first
+      });
+      return list;
     });
   }
 
@@ -20,12 +26,17 @@ class OrderService {
   Stream<List<OrderModel>> getOrdersByStatus(String status) {
     return _col
         .where('status', isEqualTo: status)
-        .orderBy('createdAt', descending: true)
         .snapshots()
         .map((snap) {
-      return snap.docs
+      final list = snap.docs
           .map((d) => OrderModel.fromMap(d.id, d.data()))
           .toList();
+      list.sort((a, b) {
+        final aTime = a.createdAt?.millisecondsSinceEpoch ?? 0;
+        final bTime = b.createdAt?.millisecondsSinceEpoch ?? 0;
+        return bTime.compareTo(aTime); // newest first
+      });
+      return list;
     });
   }
 
@@ -33,12 +44,17 @@ class OrderService {
   Stream<List<OrderModel>> getOrdersByUser(String userId) {
     return _col
         .where('userId', isEqualTo: userId)
-        .orderBy('createdAt', descending: true)
         .snapshots()
         .map((snap) {
-      return snap.docs
+      final list = snap.docs
           .map((d) => OrderModel.fromMap(d.id, d.data()))
           .toList();
+      list.sort((a, b) {
+        final aTime = a.createdAt?.millisecondsSinceEpoch ?? 0;
+        final bTime = b.createdAt?.millisecondsSinceEpoch ?? 0;
+        return bTime.compareTo(aTime); // newest first
+      });
+      return list;
     });
   }
 

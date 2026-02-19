@@ -4,8 +4,15 @@ import 'package:grocery_app/core/services/product_service.dart';
 import 'package:grocery_app/data/models/product_model.dart';
 import 'package:grocery_app/features/admin/add_edit_product_screen.dart';
 
-class AdminProductsTab extends StatelessWidget {
+class AdminProductsTab extends StatefulWidget {
   const AdminProductsTab({super.key});
+
+  @override
+  State<AdminProductsTab> createState() => _AdminProductsTabState();
+}
+
+class _AdminProductsTabState extends State<AdminProductsTab> {
+  String _searchQuery = '';
 
   @override
   Widget build(BuildContext context) {
@@ -23,51 +30,160 @@ class AdminProductsTab extends StatelessWidget {
         icon: const Icon(Icons.add),
         label: const Text('Add Product'),
       ),
-      body: StreamBuilder<List<ProductModel>>(
-        stream: ProductService.instance.getProducts(),
-        builder: (context, snapshot) {
-          if (snapshot.hasError) {
-            return Center(child: Text('Error: ${snapshot.error}'));
-          }
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
-
-          final products = snapshot.data ?? [];
-
-          if (products.isEmpty) {
-            return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.inventory_2_outlined,
-                      size: 64,
-                      color: AppColors.greyText.withValues(alpha: 0.5)),
-                  const SizedBox(height: 16),
-                  const Text('No products yet',
-                      style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.w600,
-                          color: AppColors.greyText)),
-                  const SizedBox(height: 8),
-                  const Text('Tap + to add your first product',
-                      style:
-                          TextStyle(fontSize: 14, color: AppColors.greyText)),
-                ],
+      body: Column(
+        children: [
+          // Search bar
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+            child: TextField(
+              onChanged: (v) => setState(() => _searchQuery = v),
+              style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                  color: AppColors.darkText),
+              decoration: InputDecoration(
+                hintText: 'Search products...',
+                hintStyle: const TextStyle(
+                    color: AppColors.greyText, fontWeight: FontWeight.w400),
+                prefixIcon:
+                    const Icon(Icons.search, color: AppColors.greyText, size: 22),
+                filled: true,
+                fillColor: AppColors.white,
+                contentPadding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(14),
+                  borderSide: BorderSide.none,
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(14),
+                  borderSide:
+                      const BorderSide(color: AppColors.borderGrey, width: 1),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(14),
+                  borderSide: const BorderSide(
+                      color: AppColors.primaryGreen, width: 1.5),
+                ),
               ),
-            );
-          }
+            ),
+          ),
+          const SizedBox(height: 12),
+          // Products list
+          Expanded(
+            child: StreamBuilder<List<ProductModel>>(
+              stream: ProductService.instance.getProducts(),
+              builder: (context, snapshot) {
+                if (snapshot.hasError) {
+                  return Center(child: Text('Error: ${snapshot.error}'));
+                }
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(
+                    child: CircularProgressIndicator(
+                        color: AppColors.primaryGreen),
+                  );
+                }
 
-          return ListView.separated(
-            padding: const EdgeInsets.all(20),
-            itemCount: products.length,
-            separatorBuilder: (_, __) => const SizedBox(height: 12),
-            itemBuilder: (context, index) {
-              final p = products[index];
-              return _buildProductCard(context, p);
-            },
-          );
-        },
+                var products = snapshot.data ?? [];
+
+                // Apply search filter
+                if (_searchQuery.isNotEmpty) {
+                  products = products
+                      .where((p) => p.name
+                          .toLowerCase()
+                          .contains(_searchQuery.toLowerCase()))
+                      .toList();
+                }
+
+                if (products.isEmpty) {
+                  return Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.inventory_2_outlined,
+                            size: 64,
+                            color:
+                                AppColors.greyText.withValues(alpha: 0.5)),
+                        const SizedBox(height: 16),
+                        Text(
+                          _searchQuery.isNotEmpty
+                              ? 'No products match "$_searchQuery"'
+                              : 'No products yet',
+                          style: const TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.w600,
+                              color: AppColors.greyText),
+                        ),
+                      ],
+                    ),
+                  );
+                }
+
+                return Column(
+                  children: [
+                    // Count badge
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 20),
+                      child: Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 10, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: AppColors.primaryGreen
+                                  .withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: Text(
+                              '${products.length} product${products.length == 1 ? '' : 's'}',
+                              style: const TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                                color: AppColors.primaryGreen,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Expanded(
+                      child: ListView.separated(
+                        padding:
+                            const EdgeInsets.fromLTRB(20, 4, 20, 80),
+                        itemCount: products.length,
+                        separatorBuilder: (_, __) =>
+                            const SizedBox(height: 10),
+                        itemBuilder: (context, index) {
+                          final p = products[index];
+                          return Dismissible(
+                            key: ValueKey(p.id),
+                            direction: DismissDirection.endToStart,
+                            confirmDismiss: (_) =>
+                                _confirmDelete(context, p),
+                            background: Container(
+                              alignment: Alignment.centerRight,
+                              padding:
+                                  const EdgeInsets.only(right: 20),
+                              decoration: BoxDecoration(
+                                color: Colors.red.withValues(alpha: 0.1),
+                                borderRadius:
+                                    BorderRadius.circular(14),
+                              ),
+                              child: const Icon(Icons.delete_rounded,
+                                  color: Colors.red, size: 28),
+                            ),
+                            child: _buildProductCard(context, p),
+                          );
+                        },
+                      ),
+                    ),
+                  ],
+                );
+              },
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -96,11 +212,24 @@ class AdminProductsTab extends StatelessWidget {
               width: 60,
               height: 60,
               fit: BoxFit.cover,
+              loadingBuilder: (_, child, progress) {
+                if (progress == null) return child;
+                return Container(
+                  width: 60,
+                  height: 60,
+                  color: AppColors.lightGrey,
+                  child: const Center(
+                    child: CircularProgressIndicator(
+                        strokeWidth: 2, color: AppColors.primaryGreen),
+                  ),
+                );
+              },
               errorBuilder: (_, __, ___) => Container(
                 width: 60,
                 height: 60,
                 color: AppColors.lightGrey,
-                child: const Icon(Icons.image, color: AppColors.greyText),
+                child:
+                    const Icon(Icons.image, color: AppColors.greyText),
               ),
             ),
           ),
@@ -113,7 +242,7 @@ class AdminProductsTab extends StatelessWidget {
                 Text(
                   product.name,
                   style: const TextStyle(
-                    fontSize: 16,
+                    fontSize: 15,
                     fontWeight: FontWeight.bold,
                     color: AppColors.darkText,
                   ),
@@ -126,76 +255,35 @@ class AdminProductsTab extends StatelessWidget {
                   style: const TextStyle(
                       fontSize: 13, color: AppColors.greyText),
                 ),
-                const SizedBox(height: 4),
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                  decoration: BoxDecoration(
-                    color: product.inStock
-                        ? AppColors.primaryGreen.withValues(alpha: 0.1)
-                        : Colors.red.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(6),
-                  ),
-                  child: Text(
-                    product.inStock ? 'In Stock' : 'Out of Stock',
-                    style: TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w600,
-                      color: product.inStock
+                const SizedBox(height: 6),
+                // Badge chips
+                Wrap(
+                  spacing: 5,
+                  runSpacing: 4,
+                  children: [
+                    _chip(
+                      product.inStock ? 'In Stock' : 'Out of Stock',
+                      product.inStock
                           ? AppColors.primaryGreen
                           : Colors.red,
                     ),
-                  ),
+                    if (product.isExclusive)
+                      _chip('Exclusive', Colors.orange),
+                    if (product.isCarousel)
+                      _chip('Carousel', Colors.blue),
+                    if (product.isFeatured)
+                      _chip('Featured', Colors.purple),
+                  ],
                 ),
-                if (product.isCarousel || product.isFeatured)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 4),
-                    child: Wrap(
-                      spacing: 6,
-                      children: [
-                        if (product.isCarousel)
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 6, vertical: 2),
-                            decoration: BoxDecoration(
-                              color: Colors.blue.withValues(alpha: 0.1),
-                              borderRadius: BorderRadius.circular(6),
-                            ),
-                            child: const Text(
-                              '🎠 Carousel',
-                              style: TextStyle(
-                                fontSize: 10,
-                                fontWeight: FontWeight.w600,
-                                color: Colors.blue,
-                              ),
-                            ),
-                          ),
-                        if (product.isFeatured)
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 6, vertical: 2),
-                            decoration: BoxDecoration(
-                              color: Colors.purple.withValues(alpha: 0.1),
-                              borderRadius: BorderRadius.circular(6),
-                            ),
-                            child: const Text(
-                              '⭐ Featured',
-                              style: TextStyle(
-                                fontSize: 10,
-                                fontWeight: FontWeight.w600,
-                                color: Colors.purple,
-                              ),
-                            ),
-                          ),
-                      ],
-                    ),
-                  ),
               ],
             ),
           ),
           // Actions
           PopupMenuButton<String>(
-            icon: const Icon(Icons.more_vert, color: AppColors.greyText),
+            icon: const Icon(Icons.more_vert,
+                color: AppColors.greyText, size: 22),
+            shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12)),
             onSelected: (value) {
               switch (value) {
                 case 'edit':
@@ -218,6 +306,10 @@ class AdminProductsTab extends StatelessWidget {
                   ProductService.instance
                       .toggleFeatured(product.id, !product.isFeatured);
                   break;
+                case 'exclusive':
+                  ProductService.instance
+                      .toggleExclusive(product.id, !product.isExclusive);
+                  break;
                 case 'delete':
                   _confirmDelete(context, product);
                   break;
@@ -231,6 +323,12 @@ class AdminProductsTab extends StatelessWidget {
                 child: Text(product.inStock
                     ? 'Mark Out of Stock'
                     : 'Mark In Stock'),
+              ),
+              PopupMenuItem(
+                value: 'exclusive',
+                child: Text(product.isExclusive
+                    ? 'Remove Exclusive'
+                    : 'Mark Exclusive'),
               ),
               PopupMenuItem(
                 value: 'carousel',
@@ -256,24 +354,51 @@ class AdminProductsTab extends StatelessWidget {
     );
   }
 
-  void _confirmDelete(BuildContext context, ProductModel product) {
-    showDialog(
+  Widget _chip(String text, Color color) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(6),
+      ),
+      child: Text(
+        text,
+        style: TextStyle(
+          fontSize: 10,
+          fontWeight: FontWeight.w600,
+          color: color,
+        ),
+      ),
+    );
+  }
+
+  Future<bool?> _confirmDelete(
+      BuildContext context, ProductModel product) async {
+    return showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16)),
         title: const Text('Delete Product'),
-        content: Text('Delete "${product.name}"? This cannot be undone.'),
+        content:
+            Text('Delete "${product.name}"? This cannot be undone.'),
         actions: [
           TextButton(
-            onPressed: () => Navigator.of(ctx).pop(),
-            child: const Text('Cancel'),
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('Cancel',
+                style: TextStyle(color: AppColors.greyText)),
           ),
           ElevatedButton(
             onPressed: () {
               ProductService.instance.deleteProduct(product.id);
-              Navigator.of(ctx).pop();
+              Navigator.of(ctx).pop(true);
             },
             style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.red, foregroundColor: Colors.white),
+              backgroundColor: Colors.red,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12)),
+            ),
             child: const Text('Delete'),
           ),
         ],

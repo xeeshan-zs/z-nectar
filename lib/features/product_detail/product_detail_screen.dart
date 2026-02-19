@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:grocery_app/core/theme/app_colors.dart';
 import 'package:grocery_app/core/constants/app_constants.dart';
 import 'package:grocery_app/core/widgets/green_button.dart';
+import 'package:grocery_app/core/services/cart_service.dart';
+import 'package:grocery_app/core/services/favourites_service.dart';
 import 'package:grocery_app/data/models/product_model.dart';
 
 class ProductDetailScreen extends StatefulWidget {
@@ -17,8 +20,48 @@ class ProductDetailScreen extends StatefulWidget {
 class _ProductDetailScreenState extends State<ProductDetailScreen> {
   int _quantity = 1;
   bool _isFavourite = false;
+  bool _isAddingToCart = false;
   bool _detailExpanded = true;
   final int _imageIndex = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkFavourite();
+  }
+
+  Future<void> _checkFavourite() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+    final fav = await FavouritesService.instance
+        .isFavourite(user.uid, widget.product.id);
+    if (mounted) setState(() => _isFavourite = fav);
+  }
+
+  Future<void> _toggleFavourite() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+    final newState = await FavouritesService.instance
+        .toggleFavourite(user.uid, widget.product.id);
+    if (mounted) setState(() => _isFavourite = newState);
+  }
+
+  Future<void> _addToCart() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+    setState(() => _isAddingToCart = true);
+    await CartService.instance
+        .addToCart(user.uid, widget.product, qty: _quantity);
+    if (!mounted) return;
+    setState(() => _isAddingToCart = false);
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('${widget.product.name} added to cart!'),
+        backgroundColor: AppColors.primaryGreen,
+        duration: const Duration(seconds: 1),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -117,8 +160,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                           ),
                         ),
                         GestureDetector(
-                          onTap: () =>
-                              setState(() => _isFavourite = !_isFavourite),
+                          onTap: _toggleFavourite,
                           child: Icon(
                             _isFavourite
                                 ? Icons.favorite
@@ -325,18 +367,14 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
           Padding(
             padding: const EdgeInsets.fromLTRB(
                 AppConstants.horizontalPadding, 0, AppConstants.horizontalPadding, 20),
-            child: GreenButton(
-              text: 'Add To Basket',
-              onPressed: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Added to basket!'),
-                    backgroundColor: AppColors.primaryGreen,
-                    duration: Duration(seconds: 1),
+            child: _isAddingToCart
+                ? const Center(
+                    child: CircularProgressIndicator(
+                        color: AppColors.primaryGreen))
+                : GreenButton(
+                    text: 'Add To Basket',
+                    onPressed: _addToCart,
                   ),
-                );
-              },
-            ),
           ),
         ],
       ),

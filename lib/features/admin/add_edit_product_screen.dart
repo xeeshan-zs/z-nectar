@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:grocery_app/core/theme/app_colors.dart';
 import 'package:grocery_app/core/services/product_service.dart';
 import 'package:grocery_app/data/models/product_model.dart';
@@ -19,13 +20,17 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
   late final TextEditingController _imageCtrl;
   late final TextEditingController _priceCtrl;
   late final TextEditingController _unitCtrl;
-  late final TextEditingController _categoryCtrl;
   late final TextEditingController _nutritionCtrl;
   late bool _inStock;
   late bool _isExclusive;
   late bool _isCarousel;
   late bool _isFeatured;
   bool _loading = false;
+
+  // Category dropdown
+  String? _selectedCategoryId;
+  List<Map<String, String>> _categories = []; // [{id, name}]
+  bool _catsLoading = true;
 
   bool get _isEdit => widget.product != null;
 
@@ -39,13 +44,39 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
     _priceCtrl =
         TextEditingController(text: p != null ? p.price.toString() : '');
     _unitCtrl = TextEditingController(text: p?.unit ?? '');
-    _categoryCtrl = TextEditingController(text: p?.categoryId ?? '');
     _nutritionCtrl =
         TextEditingController(text: p?.nutritionWeight ?? '100gr');
     _inStock = p?.inStock ?? true;
     _isExclusive = p?.isExclusive ?? false;
     _isCarousel = p?.isCarousel ?? false;
     _isFeatured = p?.isFeatured ?? false;
+    _selectedCategoryId = p?.categoryId;
+
+    _loadCategories();
+  }
+
+  Future<void> _loadCategories() async {
+    final snap = await FirebaseFirestore.instance
+        .collection('categories')
+        .orderBy('name')
+        .get();
+    final cats = snap.docs
+        .map((d) => {
+              'id': d.id,
+              'name': (d.data()['name'] as String?) ?? '',
+            })
+        .toList();
+    if (mounted) {
+      setState(() {
+        _categories = cats;
+        _catsLoading = false;
+        // Verify selected category still exists
+        if (_selectedCategoryId != null &&
+            !cats.any((c) => c['id'] == _selectedCategoryId)) {
+          _selectedCategoryId = null;
+        }
+      });
+    }
   }
 
   @override
@@ -55,13 +86,18 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
     _imageCtrl.dispose();
     _priceCtrl.dispose();
     _unitCtrl.dispose();
-    _categoryCtrl.dispose();
     _nutritionCtrl.dispose();
     super.dispose();
   }
 
   Future<void> _save() async {
     if (!_formKey.currentState!.validate()) return;
+    if (_selectedCategoryId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please select a category')),
+      );
+      return;
+    }
     setState(() => _loading = true);
 
     final product = ProductModel(
@@ -71,7 +107,7 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
       imageUrl: _imageCtrl.text.trim(),
       price: double.tryParse(_priceCtrl.text.trim()) ?? 0,
       unit: _unitCtrl.text.trim(),
-      categoryId: _categoryCtrl.text.trim(),
+      categoryId: _selectedCategoryId!,
       nutritionWeight: _nutritionCtrl.text.trim(),
       inStock: _inStock,
       isExclusive: _isExclusive,
@@ -102,7 +138,7 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.white,
+      backgroundColor: const Color(0xFFF6F6F8),
       appBar: AppBar(
         backgroundColor: AppColors.white,
         elevation: 0,
@@ -125,138 +161,181 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
         child: Form(
           key: _formKey,
           child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _buildField(_nameCtrl, 'Product Name', Icons.label_outline),
-              const SizedBox(height: 16),
-              _buildField(
-                  _descCtrl, 'Description', Icons.description_outlined,
-                  maxLines: 3),
-              const SizedBox(height: 16),
-              _buildField(
-                  _imageCtrl, 'Image URL', Icons.image_outlined),
-              const SizedBox(height: 16),
-              Row(
+              // ── Basic Info Card ──────────────────────────────
+              _sectionCard(
+                title: 'Basic Info',
+                icon: Icons.info_outline_rounded,
                 children: [
-                  Expanded(
-                    child: _buildField(
-                        _priceCtrl, 'Price', Icons.attach_money,
-                        isNumber: true),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child:
-                        _buildField(_unitCtrl, 'Unit', Icons.straighten),
+                  _buildField(_nameCtrl, 'Product Name', Icons.label_outline),
+                  const SizedBox(height: 14),
+                  _buildField(
+                      _descCtrl, 'Description', Icons.description_outlined,
+                      maxLines: 3),
+                ],
+              ),
+              const SizedBox(height: 16),
+
+              // ── Image Card ──────────────────────────────────
+              _sectionCard(
+                title: 'Image',
+                icon: Icons.image_outlined,
+                children: [
+                  _buildField(
+                      _imageCtrl, 'Image URL', Icons.link_rounded),
+                  const SizedBox(height: 12),
+                  // Image preview
+                  Builder(builder: (_) {
+                    final url = _imageCtrl.text.trim();
+                    if (url.isEmpty) {
+                      return Container(
+                        height: 120,
+                        width: double.infinity,
+                        decoration: BoxDecoration(
+                          color: AppColors.lightGrey,
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: const Center(
+                          child: Text('Enter URL to see preview',
+                              style: TextStyle(
+                                  color: AppColors.greyText, fontSize: 13)),
+                        ),
+                      );
+                    }
+                    return ClipRRect(
+                      borderRadius: BorderRadius.circular(12),
+                      child: Image.network(
+                        url,
+                        height: 120,
+                        width: double.infinity,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) => Container(
+                          height: 120,
+                          width: double.infinity,
+                          decoration: BoxDecoration(
+                            color: Colors.red.withValues(alpha: 0.05),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: const Center(
+                            child: Text('Invalid URL',
+                                style: TextStyle(color: Colors.red)),
+                          ),
+                        ),
+                      ),
+                    );
+                  }),
+                  const SizedBox(height: 6),
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: TextButton.icon(
+                      onPressed: () => setState(() {}),
+                      icon: const Icon(Icons.refresh, size: 16),
+                      label: const Text('Refresh Preview',
+                          style: TextStyle(fontSize: 12)),
+                      style: TextButton.styleFrom(
+                        foregroundColor: AppColors.primaryGreen,
+                      ),
+                    ),
                   ),
                 ],
               ),
               const SizedBox(height: 16),
-              _buildField(_categoryCtrl, 'Category ID',
-                  Icons.category_outlined),
+
+              // ── Pricing & Details Card ──────────────────────
+              _sectionCard(
+                title: 'Pricing & Details',
+                icon: Icons.attach_money_rounded,
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _buildField(
+                            _priceCtrl, 'Price', Icons.attach_money,
+                            isNumber: true),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: _buildField(
+                            _unitCtrl, 'Unit', Icons.straighten),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 14),
+                  _buildField(_nutritionCtrl, 'Nutrition Weight',
+                      Icons.restaurant_menu),
+                  const SizedBox(height: 14),
+                  // Category dropdown
+                  _catsLoading
+                      ? const Center(
+                          child: Padding(
+                            padding: EdgeInsets.all(8),
+                            child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: AppColors.primaryGreen),
+                          ),
+                        )
+                      : DropdownButtonFormField<String>(
+                          initialValue: _selectedCategoryId,
+                          isExpanded: true,
+                          decoration: InputDecoration(
+                            labelText: 'Category',
+                            labelStyle:
+                                const TextStyle(color: AppColors.greyText),
+                            prefixIcon: const Icon(
+                                Icons.category_outlined,
+                                color: AppColors.greyText,
+                                size: 20),
+                            filled: true,
+                            fillColor: AppColors.lightGrey,
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: BorderSide.none,
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: const BorderSide(
+                                  color: AppColors.primaryGreen,
+                                  width: 1.5),
+                            ),
+                          ),
+                          items: _categories
+                              .map((c) => DropdownMenuItem(
+                                    value: c['id'],
+                                    child: Text(c['name']!,
+                                        style: const TextStyle(
+                                            fontSize: 15,
+                                            fontWeight: FontWeight.w500,
+                                            color: AppColors.darkText)),
+                                  ))
+                              .toList(),
+                          onChanged: (v) =>
+                              setState(() => _selectedCategoryId = v),
+                          validator: (v) =>
+                              v == null ? 'Select a category' : null,
+                        ),
+                ],
+              ),
               const SizedBox(height: 16),
-              _buildField(_nutritionCtrl, 'Nutrition Weight',
-                  Icons.restaurant_menu),
-              const SizedBox(height: 16),
-              // In Stock Toggle
-              Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                decoration: BoxDecoration(
-                  color: AppColors.lightGrey,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    const Text('In Stock',
-                        style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
-                            color: AppColors.darkText)),
-                    Switch(
-                      value: _inStock,
-                      activeTrackColor: AppColors.primaryGreen,
-                      onChanged: (v) => setState(() => _inStock = v),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 12),
-              // Exclusive Offer Toggle
-              Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                decoration: BoxDecoration(
-                  color: AppColors.lightGrey,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    const Text('Exclusive Offer',
-                        style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
-                            color: AppColors.darkText)),
-                    Switch(
-                      value: _isExclusive,
-                      activeTrackColor: Colors.orange,
-                      onChanged: (v) => setState(() => _isExclusive = v),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 12),
-              // Show in Carousel Toggle
-              Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                decoration: BoxDecoration(
-                  color: AppColors.lightGrey,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    const Text('Show in Carousel',
-                        style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
-                            color: AppColors.darkText)),
-                    Switch(
-                      value: _isCarousel,
-                      activeTrackColor: Colors.blue,
-                      onChanged: (v) => setState(() => _isCarousel = v),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 12),
-              // Featured Product Toggle
-              Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                decoration: BoxDecoration(
-                  color: AppColors.lightGrey,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    const Text('Featured Product',
-                        style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
-                            color: AppColors.darkText)),
-                    Switch(
-                      value: _isFeatured,
-                      activeTrackColor: Colors.purple,
-                      onChanged: (v) => setState(() => _isFeatured = v),
-                    ),
-                  ],
-                ),
+
+              // ── Toggles Card ────────────────────────────────
+              _sectionCard(
+                title: 'Visibility & Flags',
+                icon: Icons.toggle_on_outlined,
+                children: [
+                  _buildToggle('In Stock', _inStock,
+                      AppColors.primaryGreen, (v) => _inStock = v),
+                  _buildToggle('Exclusive Offer', _isExclusive,
+                      Colors.orange, (v) => _isExclusive = v),
+                  _buildToggle('Show in Carousel', _isCarousel,
+                      Colors.blue, (v) => _isCarousel = v),
+                  _buildToggle('Featured Product', _isFeatured,
+                      Colors.purple, (v) => _isFeatured = v),
+                ],
               ),
               const SizedBox(height: 30),
-              // Save Button
+
+              // ── Save Button ─────────────────────────────────
               SizedBox(
                 width: double.infinity,
                 height: 56,
@@ -284,9 +363,75 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
                         ),
                 ),
               ),
+              const SizedBox(height: 20),
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _sectionCard({
+    required String title,
+    required IconData icon,
+    required List<Widget> children,
+  }) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: AppColors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 10,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(icon, color: AppColors.primaryGreen, size: 20),
+              const SizedBox(width: 8),
+              Text(
+                title,
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.darkText,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          ...children,
+        ],
+      ),
+    );
+  }
+
+  Widget _buildToggle(
+      String label, bool value, Color activeColor, ValueChanged<bool> setter) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 2),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(label,
+              style: TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w500,
+                  color: value ? AppColors.darkText : AppColors.greyText)),
+          Switch(
+            value: value,
+            activeTrackColor: activeColor,
+            onChanged: (v) => setState(() => setter(v)),
+          ),
+        ],
       ),
     );
   }

@@ -5,6 +5,7 @@ import 'package:grocery_app/core/widgets/placeholder_screen.dart';
 import 'package:grocery_app/features/auth/auth_service.dart';
 import 'package:grocery_app/features/auth/splash_screen.dart';
 import 'package:grocery_app/features/location/location_selection_screen.dart';
+import 'package:grocery_app/features/order/order_history_screen.dart';
 
 class AccountScreen extends StatelessWidget {
   const AccountScreen({super.key});
@@ -95,7 +96,7 @@ class AccountScreen extends StatelessWidget {
             const SizedBox(height: 25),
             const Divider(),
             // Menu Items
-            _buildMenuItem(context, Icons.shopping_bag_outlined, 'Orders'),
+            _buildOrdersMenuItem(context),
             _buildMenuItem(context, Icons.badge_outlined, 'My Details'),
             _buildLocationMenuItem(context), // Special case for location
             _buildMenuItem(
@@ -165,6 +166,46 @@ class AccountScreen extends StatelessWidget {
                 const Expanded(
                   child: Text(
                     'Delivery Address',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.darkText,
+                    ),
+                  ),
+                ),
+                const Icon(Icons.chevron_right,
+                    color: AppColors.darkText, size: 24),
+              ],
+            ),
+          ),
+        ),
+        const Divider(),
+      ],
+    );
+  }
+
+  Widget _buildOrdersMenuItem(BuildContext context) {
+    return Column(
+      children: [
+        InkWell(
+          onTap: () {
+            Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (_) => const OrderHistoryScreen(),
+              ),
+            );
+          },
+          child: Padding(
+            padding: const EdgeInsets.symmetric(
+                horizontal: AppConstants.horizontalPadding, vertical: 16),
+            child: Row(
+              children: [
+                const Icon(Icons.shopping_bag_outlined,
+                    color: AppColors.darkText, size: 24),
+                const SizedBox(width: 18),
+                const Expanded(
+                  child: Text(
+                    'Orders',
                     style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
