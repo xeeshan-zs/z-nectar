@@ -228,16 +228,6 @@ class _FavouriteItemTile extends StatelessWidget {
                   color: AppColors.darkText),
             ),
             const SizedBox(width: 10),
-            // Remove from favourites
-            GestureDetector(
-              onTap: () {
-                FavouritesService.instance
-                    .removeFavourite(userId, product.id);
-              },
-              child: const Icon(Icons.favorite,
-                  color: Colors.red, size: 24),
-            ),
-            const SizedBox(width: 8),
             const Icon(Icons.chevron_right,
                 color: AppColors.darkText, size: 24),
           ],

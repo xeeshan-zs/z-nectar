@@ -64,7 +64,7 @@ class CartScreen extends StatelessWidget {
               const Text(
                 'My Cart',
                 style: TextStyle(
-                    fontSize: 20,
+                    fontSize: 24,
                     fontWeight: FontWeight.bold,
                     color: AppColors.darkText),
               ),
@@ -89,6 +89,22 @@ class CartScreen extends StatelessWidget {
                     20),
                 child: GreenButton(
                   text: 'Go to Checkout',
+                  trailing: Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 5, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF489E67),
+                      borderRadius: BorderRadius.circular(5),
+                    ),
+                    child: Text(
+                      '\$${totalCost.toStringAsFixed(2)}',
+                      style: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.white,
+                      ),
+                    ),
+                  ),
                   onPressed: () {
                     showModalBottomSheet(
                       context: context,

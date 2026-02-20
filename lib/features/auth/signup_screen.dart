@@ -102,7 +102,20 @@ class _SignupScreenState extends State<SignupScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const SizedBox(height: 10),
+                // ── Carrot Logo ───────────────────────────────────────
+                Center(
+                  child: Image.network(
+                    'https://img.icons8.com/emoji/96/carrot-emoji.png',
+                    width: 50,
+                    height: 50,
+                    errorBuilder: (_, __, ___) => const Icon(
+                      Icons.eco,
+                      color: AppColors.primaryGreen,
+                      size: 50,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 40),
 
                 // ── Header ────────────────────────────────────────────────
                 const Text(
@@ -148,7 +161,7 @@ class _SignupScreenState extends State<SignupScreen> {
                   style: const TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w600,
-                    color: AppColors.darkText,
+                    color: AppColors.greyText,
                   ),
                 ),
                 const SizedBox(height: 8),
@@ -177,28 +190,22 @@ class _SignupScreenState extends State<SignupScreen> {
                       color: AppColors.greyText,
                       size: 20,
                     ),
-                    filled: true,
-                    fillColor: AppColors.lightGrey,
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(14),
-                      borderSide: BorderSide.none,
+                    filled: false,
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 0, vertical: 14),
+                    border: const UnderlineInputBorder(
+                      borderSide: BorderSide(color: AppColors.borderGrey, width: 1),
                     ),
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(14),
-                      borderSide: BorderSide.none,
+                    enabledBorder: const UnderlineInputBorder(
+                      borderSide: BorderSide(color: AppColors.borderGrey, width: 1),
                     ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(14),
-                      borderSide: const BorderSide(color: AppColors.primaryGreen, width: 1.5),
+                    focusedBorder: const UnderlineInputBorder(
+                      borderSide: BorderSide(color: AppColors.primaryGreen, width: 1.5),
                     ),
-                    errorBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(14),
-                      borderSide: const BorderSide(color: Color(0xFFD32F2F), width: 1.5),
+                    errorBorder: const UnderlineInputBorder(
+                      borderSide: BorderSide(color: Color(0xFFD32F2F), width: 1.5),
                     ),
-                    focusedErrorBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(14),
-                      borderSide: const BorderSide(color: Color(0xFFD32F2F), width: 1.5),
+                    focusedErrorBorder: const UnderlineInputBorder(
+                      borderSide: BorderSide(color: Color(0xFFD32F2F), width: 1.5),
                     ),
                   ),
                   validator: (v) {

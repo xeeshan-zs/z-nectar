@@ -29,7 +29,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
           const Text(
             'Find Products',
             style: TextStyle(
-              fontSize: 20,
+              fontSize: 24,
               fontWeight: FontWeight.bold,
               color: AppColors.darkText,
             ),
