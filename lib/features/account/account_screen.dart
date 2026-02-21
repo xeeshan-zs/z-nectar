@@ -1,11 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:grocery_app/core/theme/app_colors.dart';
 import 'package:grocery_app/core/constants/app_constants.dart';
-import 'package:grocery_app/core/widgets/placeholder_screen.dart';
 import 'package:grocery_app/features/auth/auth_service.dart';
 import 'package:grocery_app/features/auth/splash_screen.dart';
 import 'package:grocery_app/features/location/location_selection_screen.dart';
 import 'package:grocery_app/features/order/order_history_screen.dart';
+
+import 'my_details_screen.dart';
+import 'payment_methods_screen.dart';
+import 'promo_code_screen.dart';
+import 'notifications_settings_screen.dart';
+import 'help_screen.dart';
+import 'about_screen.dart';
 
 class AccountScreen extends StatelessWidget {
   const AccountScreen({super.key});
@@ -97,16 +103,16 @@ class AccountScreen extends StatelessWidget {
             const Divider(),
             // Menu Items
             _buildOrdersMenuItem(context),
-            _buildMenuItem(context, Icons.badge_outlined, 'My Details'),
+            _buildMenuItem(context, Icons.badge_outlined, 'My Details', const MyDetailsScreen()),
             _buildLocationMenuItem(context), // Special case for location
             _buildMenuItem(
-                context, Icons.payment_outlined, 'Payment Methods'),
+                context, Icons.payment_outlined, 'Payment Methods', const PaymentMethodsScreen()),
             _buildMenuItem(
-                context, Icons.local_offer_outlined, 'Promo Code'),
+                context, Icons.local_offer_outlined, 'Promo Code', const PromoCodeScreen()),
             _buildMenuItem(
-                context, Icons.notifications_outlined, 'Notifications'),
-            _buildMenuItem(context, Icons.help_outline, 'Help'),
-            _buildMenuItem(context, Icons.info_outline, 'About'),
+                context, Icons.notifications_outlined, 'Notifications', const NotificationsSettingsScreen()),
+            _buildMenuItem(context, Icons.help_outline, 'Help', const HelpScreen()),
+            _buildMenuItem(context, Icons.info_outline, 'About', const AboutScreen()),
             const SizedBox(height: 30),
             // Log Out Button
             Padding(
@@ -224,14 +230,14 @@ class AccountScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildMenuItem(BuildContext context, IconData icon, String title) {
+  Widget _buildMenuItem(BuildContext context, IconData icon, String title, Widget targetScreen) {
     return Column(
       children: [
         InkWell(
           onTap: () {
             Navigator.of(context).push(
               MaterialPageRoute(
-                builder: (_) => PlaceholderScreen(title: title),
+                builder: (_) => targetScreen,
               ),
             );
           },
