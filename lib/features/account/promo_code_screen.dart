@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:grocery_app/core/theme/app_colors.dart';
 import 'package:grocery_app/core/constants/app_constants.dart';
-import 'package:grocery_app/core/widgets/green_button.dart';
+import 'package:grocery_app/core/utils/snackbar_service.dart';
 
 class PromoCodeScreen extends StatefulWidget {
   const PromoCodeScreen({super.key});
@@ -100,12 +100,7 @@ class _PromoCodeScreenState extends State<PromoCodeScreen> {
                   child: ElevatedButton(
                     onPressed: () {
                       if (_codeCtrl.text.isNotEmpty) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text('Applying code: ${_codeCtrl.text} (Coming soon)'),
-                            backgroundColor: AppColors.primaryGreen,
-                          ),
-                        );
+                        SnackbarService.showInfo(context, 'Applying code: ${_codeCtrl.text} (Coming soon)');
                       }
                     },
                     style: ElevatedButton.styleFrom(
@@ -160,7 +155,7 @@ class _PromoCodeScreenState extends State<PromoCodeScreen> {
           Container(
             padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.3),
+              color: Colors.white.withValues(alpha: 0.3),
               borderRadius: const BorderRadius.only(
                 topLeft: Radius.circular(16),
                 bottomLeft: Radius.circular(16),
@@ -188,7 +183,7 @@ class _PromoCodeScreenState extends State<PromoCodeScreen> {
                     voucher['description'],
                     style: TextStyle(
                       fontSize: 13,
-                      color: AppColors.darkText.withOpacity(0.7),
+                      color: AppColors.darkText.withValues(alpha: 0.7),
                     ),
                   ),
                   const SizedBox(height: 10),

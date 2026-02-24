@@ -3,6 +3,7 @@ import 'package:grocery_app/core/theme/app_colors.dart';
 import 'package:grocery_app/core/services/product_service.dart';
 import 'package:grocery_app/data/models/product_model.dart';
 import 'package:grocery_app/features/admin/add_edit_product_screen.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 
 class AdminProductsTab extends StatefulWidget {
   const AdminProductsTab({super.key});
@@ -207,24 +208,21 @@ class _AdminProductsTabState extends State<AdminProductsTab> {
           // Thumbnail
           ClipRRect(
             borderRadius: BorderRadius.circular(10),
-            child: Image.network(
-              product.imageUrl,
+            child: CachedNetworkImage(
+              imageUrl: product.imageUrl,
               width: 60,
               height: 60,
               fit: BoxFit.cover,
-              loadingBuilder: (_, child, progress) {
-                if (progress == null) return child;
-                return Container(
-                  width: 60,
-                  height: 60,
-                  color: AppColors.lightGrey,
-                  child: const Center(
-                    child: CircularProgressIndicator(
-                        strokeWidth: 2, color: AppColors.primaryGreen),
-                  ),
-                );
-              },
-              errorBuilder: (_, __, ___) => Container(
+              placeholder: (context, url) => Container(
+                width: 60,
+                height: 60,
+                color: AppColors.lightGrey,
+                child: const Center(
+                  child: CircularProgressIndicator(
+                      strokeWidth: 2, color: AppColors.primaryGreen),
+                ),
+              ),
+              errorWidget: (_, __, ___) => Container(
                 width: 60,
                 height: 60,
                 color: AppColors.lightGrey,

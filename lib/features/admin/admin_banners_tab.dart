@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:grocery_app/core/theme/app_colors.dart';
 import 'package:grocery_app/core/services/banner_service.dart';
 import 'package:grocery_app/data/models/banner_model.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 
 class AdminBannersTab extends StatefulWidget {
   const AdminBannersTab({super.key});
@@ -200,12 +201,12 @@ class _AdminBannersTabState extends State<AdminBannersTab> {
           ClipRRect(
             borderRadius:
                 const BorderRadius.vertical(top: Radius.circular(14)),
-            child: Image.network(
-              banner.imageUrl,
+            child: CachedNetworkImage(
+              imageUrl: banner.imageUrl,
               height: 100,
               width: double.infinity,
               fit: BoxFit.cover,
-              errorBuilder: (_, __, ___) => Container(
+              errorWidget: (_, __, ___) => Container(
                 height: 100,
                 color: AppColors.lightGrey,
                 child: const Center(

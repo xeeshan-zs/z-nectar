@@ -5,6 +5,7 @@ import 'package:grocery_app/features/auth/auth_service.dart';
 import 'package:grocery_app/features/auth/splash_screen.dart';
 import 'package:grocery_app/features/location/location_selection_screen.dart';
 import 'package:grocery_app/features/order/order_history_screen.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 
 import 'my_details_screen.dart';
 import 'payment_methods_screen.dart';
@@ -44,10 +45,10 @@ class AccountScreen extends StatelessWidget {
                     ),
                     child: user?.photoURL != null
                         ? ClipOval(
-                            child: Image.network(
-                              user!.photoURL!,
+                            child: CachedNetworkImage(
+                              imageUrl: user!.photoURL!,
                               fit: BoxFit.cover,
-                              errorBuilder: (_, __, ___) => const Icon(
+                              errorWidget: (_, __, ___) => const Icon(
                                   Icons.person,
                                   color: AppColors.primaryGreen,
                                   size: 35),

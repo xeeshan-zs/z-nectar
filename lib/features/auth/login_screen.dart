@@ -1,21 +1,24 @@
 import 'package:flutter/material.dart';
 import 'package:grocery_app/core/theme/app_colors.dart';
-import 'package:grocery_app/core/services/user_role_service.dart';
 import 'package:grocery_app/features/admin/admin_dashboard_screen.dart';
-import 'package:grocery_app/features/auth/auth_service.dart';
 import 'package:grocery_app/features/auth/signup_screen.dart';
 import 'package:grocery_app/features/dashboard/dashboard_screen.dart';
 
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:grocery_app/core/services/providers.dart';
+import 'package:grocery_app/core/utils/snackbar_service.dart';
+import 'package:cached_network_image/cached_network_image.dart';
+
 enum _LoginMethod { email, phone }
 
-class LoginScreen extends StatefulWidget {
+class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
 
   @override
-  State<LoginScreen> createState() => _LoginScreenState();
+  ConsumerState<LoginScreen> createState() => _LoginScreenState();
 }
 
-class _LoginScreenState extends State<LoginScreen> {
+class _LoginScreenState extends ConsumerState<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
   final _emailCtrl = TextEditingController();
   final _passwordCtrl = TextEditingController();
@@ -41,7 +44,7 @@ class _LoginScreenState extends State<LoginScreen> {
       _errorMessage = null;
     });
     try {
-      final cred = await AuthService.instance.login(
+      final cred = await ref.read(authServiceProvider).login(
         email: _emailCtrl.text.trim(),
         password: _passwordCtrl.text,
       );
@@ -65,7 +68,7 @@ class _LoginScreenState extends State<LoginScreen> {
     final phone = _phoneCtrl.text.trim();
     final fullPhone = phone.startsWith('+') ? phone : '+92${phone.replaceFirst(RegExp(r'^0'), '')}';
 
-    await AuthService.instance.sendPhoneOtp(
+    await ref.read(authServiceProvider).sendPhoneOtp(
       phoneNumber: fullPhone,
       onError: (err) {
         if (mounted) {
@@ -113,7 +116,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
             try {
               final nav = Navigator.of(ctx);
-              final cred = await AuthService.instance.verifyPhoneOtp(otp);
+              final cred = await ref.read(authServiceProvider).verifyPhoneOtp(otp);
               if (cred?.user != null && mounted) {
                 nav.pop(); // close sheet
                 await _routeByRole(cred!.user!.uid,
@@ -250,8 +253,8 @@ class _LoginScreenState extends State<LoginScreen> {
 
   // ── Route by role ──────────────────────────────────────────────────────
   Future<void> _routeByRole(String uid, {required String email}) async {
-    await UserRoleService.instance.ensureUserDoc(uid: uid, email: email);
-    final role = await UserRoleService.instance.getRole(uid);
+    await ref.read(userRoleServiceProvider).ensureUserDoc(uid: uid, email: email);
+    final role = await ref.read(userRoleServiceProvider).getRole(uid);
     if (!mounted) return;
     final destination =
         role == 'admin' ? const AdminDashboardScreen() : const DashboardScreen();
@@ -269,11 +272,9 @@ class _LoginScreenState extends State<LoginScreen> {
       return;
     }
     try {
-      await AuthService.instance.sendPasswordReset(email);
+      await ref.read(authServiceProvider).sendPasswordReset(email);
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Password reset email sent!')),
-      );
+      SnackbarService.showSuccess(context, 'Password reset email sent!');
     } catch (e) {
       setState(() => _errorMessage = _friendlyError(e.toString()));
     }
@@ -314,11 +315,11 @@ class _LoginScreenState extends State<LoginScreen> {
 
                 // ── Carrot Logo ───────────────────────────────────────
                 Center(
-                  child: Image.network(
-                    'https://img.icons8.com/emoji/96/carrot-emoji.png',
+                  child: CachedNetworkImage(
+                    imageUrl: 'https://img.icons8.com/emoji/96/carrot-emoji.png',
                     width: 50,
                     height: 50,
-                    errorBuilder: (_, __, ___) => const Icon(
+                    errorWidget: (_, __, ___) => const Icon(
                       Icons.eco,
                       color: AppColors.primaryGreen,
                       size: 50,

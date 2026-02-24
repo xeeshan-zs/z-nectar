@@ -8,6 +8,7 @@ import 'package:grocery_app/core/services/order_service.dart';
 import 'package:grocery_app/data/models/order_model.dart';
 import 'package:grocery_app/features/order/order_success_screen.dart';
 import 'package:grocery_app/features/order/order_failed_dialog.dart';
+import 'package:grocery_app/core/services/location_service.dart';
 
 class CheckoutBottomSheet extends StatefulWidget {
   final double totalCost;
@@ -57,7 +58,7 @@ class _CheckoutBottomSheetState extends State<CheckoutBottomSheet> {
             .toList(),
         total: widget.totalCost,
         paymentMethod: _paymentMethod,
-        address: _deliveryMethod == 'Pickup' ? 'Store Pickup' : '',
+        address: _deliveryMethod == 'Pickup' ? 'Store Pickup' : await _getSelectedAddress(),
       );
 
       await OrderService.instance.placeOrder(order);
@@ -78,6 +79,15 @@ class _CheckoutBottomSheetState extends State<CheckoutBottomSheet> {
       );
     } finally {
       if (mounted) setState(() => _isPlacingOrder = false);
+    }
+  }
+
+  Future<String> _getSelectedAddress() async {
+    try {
+      final loc = await LocationService.instance.getCurrentLocation().first;
+      return loc?.address ?? 'No address selected';
+    } catch (_) {
+      return 'Address fetch error';
     }
   }
 

@@ -106,7 +106,7 @@ class _NotificationsSettingsScreenState
           Switch(
             value: value,
             onChanged: onChanged,
-            activeColor: AppColors.white,
+            activeThumbColor: AppColors.white,
             activeTrackColor: AppColors.primaryGreen,
             inactiveThumbColor: AppColors.white,
             inactiveTrackColor: AppColors.lightGrey,

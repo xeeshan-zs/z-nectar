@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:grocery_app/core/theme/app_colors.dart';
 import 'package:grocery_app/core/constants/app_constants.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 
 class AboutScreen extends StatelessWidget {
   const AboutScreen({super.key});
@@ -39,11 +40,11 @@ class AboutScreen extends StatelessWidget {
                   color: AppColors.lightGrey,
                   shape: BoxShape.circle,
                 ),
-                child: Image.network(
-                  'https://img.icons8.com/emoji/96/carrot-emoji.png',
+                child: CachedNetworkImage(
+                  imageUrl: 'https://img.icons8.com/emoji/96/carrot-emoji.png',
                   width: 80,
                   height: 80,
-                  errorBuilder: (_, __, ___) => const Icon(
+                  errorWidget: (_, __, ___) => const Icon(
                     Icons.eco,
                     color: AppColors.primaryGreen,
                     size: 80,

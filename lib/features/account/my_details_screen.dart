@@ -3,6 +3,7 @@ import 'package:grocery_app/core/theme/app_colors.dart';
 import 'package:grocery_app/core/constants/app_constants.dart';
 import 'package:grocery_app/core/widgets/green_button.dart';
 import 'package:grocery_app/features/auth/auth_service.dart';
+import 'package:grocery_app/core/utils/snackbar_service.dart';
 
 class MyDetailsScreen extends StatefulWidget {
   const MyDetailsScreen({super.key});
@@ -75,12 +76,7 @@ class _MyDetailsScreenState extends State<MyDetailsScreen> {
                   await user.updateDisplayName(_nameCtrl.text.trim());
                   await user.reload();
                   if (context.mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Details updated!'),
-                        backgroundColor: AppColors.primaryGreen,
-                      ),
-                    );
+                    SnackbarService.showSuccess(context, 'Details updated!');
                     Navigator.of(context).pop();
                   }
                 }
@@ -109,7 +105,7 @@ class _MyDetailsScreenState extends State<MyDetailsScreen> {
         labelStyle: const TextStyle(color: AppColors.greyText),
         prefixIcon: Icon(icon, color: AppColors.greyText, size: 22),
         filled: true,
-        fillColor: enabled ? AppColors.lightGrey : AppColors.lightGrey.withOpacity(0.5),
+        fillColor: enabled ? AppColors.lightGrey : AppColors.lightGrey.withValues(alpha: 0.5),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(15),
           borderSide: BorderSide.none,

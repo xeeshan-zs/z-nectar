@@ -3,6 +3,8 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:grocery_app/core/theme/app_colors.dart';
 import 'package:grocery_app/core/services/product_service.dart';
 import 'package:grocery_app/data/models/product_model.dart';
+import 'package:cached_network_image/cached_network_image.dart';
+import 'package:grocery_app/core/utils/snackbar_service.dart';
 
 class AddEditProductScreen extends StatefulWidget {
   final ProductModel? product; // null = add mode
@@ -93,9 +95,7 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
   Future<void> _save() async {
     if (!_formKey.currentState!.validate()) return;
     if (_selectedCategoryId == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please select a category')),
-      );
+      SnackbarService.showError(context, 'Please select a category');
       return;
     }
     setState(() => _loading = true);
@@ -126,9 +126,7 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
       if (mounted) Navigator.of(context).pop();
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e')),
-        );
+        SnackbarService.showError(context, 'Error: $e');
       }
     } finally {
       if (mounted) setState(() => _loading = false);
@@ -205,12 +203,12 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
                     }
                     return ClipRRect(
                       borderRadius: BorderRadius.circular(12),
-                      child: Image.network(
-                        url,
+                      child: CachedNetworkImage(
+                        imageUrl: url,
                         height: 120,
                         width: double.infinity,
                         fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) => Container(
+                        errorWidget: (_, __, ___) => Container(
                           height: 120,
                           width: double.infinity,
                           decoration: BoxDecoration(

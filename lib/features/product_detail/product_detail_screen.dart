@@ -6,6 +6,7 @@ import 'package:grocery_app/core/constants/app_constants.dart';
 import 'package:grocery_app/core/widgets/green_button.dart';
 import 'package:grocery_app/core/services/cart_service.dart';
 import 'package:grocery_app/core/services/favourites_service.dart';
+import 'package:grocery_app/core/utils/snackbar_service.dart';
 import 'package:grocery_app/data/models/product_model.dart';
 
 class ProductDetailScreen extends StatefulWidget {
@@ -54,13 +55,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
         .addToCart(user.uid, widget.product, qty: _quantity);
     if (!mounted) return;
     setState(() => _isAddingToCart = false);
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('${widget.product.name} added to cart!'),
-        backgroundColor: AppColors.primaryGreen,
-        duration: const Duration(seconds: 1),
-      ),
-    );
+    SnackbarService.showSuccess(context, '${widget.product.name} added to cart!');
   }
 
   @override

@@ -44,3 +44,6 @@ analyze_output.txt
 .pub-cache/
 .pub/
 pubspec.lock
+
+# Antigravity Agents
+.agents/

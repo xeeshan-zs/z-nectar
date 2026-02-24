@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:grocery_app/core/theme/app_colors.dart';
 import 'package:grocery_app/core/constants/app_constants.dart';
+import 'package:grocery_app/core/utils/snackbar_service.dart';
 
 class PaymentMethodsScreen extends StatefulWidget {
   const PaymentMethodsScreen({super.key});
@@ -62,11 +63,7 @@ class _PaymentMethodsScreenState extends State<PaymentMethodsScreen> {
             ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Adding payment method (Coming soon)'),
-            ),
-          );
+          SnackbarService.showInfo(context, 'Adding payment method (Coming soon)');
         },
         backgroundColor: AppColors.primaryGreen,
         icon: const Icon(Icons.add, color: AppColors.white),
@@ -81,7 +78,7 @@ class _PaymentMethodsScreenState extends State<PaymentMethodsScreen> {
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Icon(Icons.credit_card_off_outlined,
-              size: 80, color: AppColors.greyText.withOpacity(0.4)),
+              size: 80, color: AppColors.greyText.withValues(alpha: 0.4)),
           const SizedBox(height: 16),
           const Text('No Payment Methods',
               style: TextStyle(
@@ -127,7 +124,7 @@ class _PaymentMethodsScreenState extends State<PaymentMethodsScreen> {
               borderRadius: BorderRadius.circular(10),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.05),
+                  color: Colors.black.withValues(alpha: 0.05),
                   blurRadius: 4,
                   offset: const Offset(0, 2),
                 ),
@@ -164,7 +161,7 @@ class _PaymentMethodsScreenState extends State<PaymentMethodsScreen> {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
               decoration: BoxDecoration(
-                color: AppColors.primaryGreen.withOpacity(0.1),
+                color: AppColors.primaryGreen.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(6),
               ),
               child: const Text(

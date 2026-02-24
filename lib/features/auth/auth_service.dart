@@ -21,7 +21,7 @@ class AuthService {
     required void Function(String error) onError,
     required void Function() onCodeSent,
   }) async {
-    if (defaultTargetPlatform == TargetPlatform.windows) {
+    if (kDebugMode && defaultTargetPlatform == TargetPlatform.windows) {
       // Bypass for Windows development
       _verificationId = 'windows-dummy-verification-id';
       onCodeSent();
@@ -46,7 +46,7 @@ class AuthService {
   }
 
   Future<UserCredential?> verifyPhoneOtp(String otp) async {
-    if (defaultTargetPlatform == TargetPlatform.windows) {
+    if (kDebugMode && defaultTargetPlatform == TargetPlatform.windows) {
       // Simulate login on Windows (e.g., Anonymous) to get a valid User
       return await _auth.signInAnonymously();
     }

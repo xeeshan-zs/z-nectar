@@ -7,6 +7,7 @@ import 'package:grocery_app/core/widgets/green_button.dart';
 import 'package:grocery_app/core/services/cart_service.dart';
 import 'package:grocery_app/core/services/favourites_service.dart';
 import 'package:grocery_app/core/services/product_service.dart';
+import 'package:grocery_app/core/utils/snackbar_service.dart';
 import 'package:grocery_app/data/models/product_model.dart';
 import 'package:grocery_app/features/product_detail/product_detail_screen.dart';
 
@@ -130,14 +131,7 @@ class FavouritesScreen extends StatelessWidget {
                                     .addToCart(user.uid, p);
                               }
                               if (context.mounted) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
-                                    content:
-                                        Text('All favourites added to cart!'),
-                                    backgroundColor: AppColors.primaryGreen,
-                                    duration: Duration(seconds: 1),
-                                  ),
-                                );
+                                SnackbarService.showSuccess(context, 'All favourites added to cart!');
                               }
                             },
                           ),

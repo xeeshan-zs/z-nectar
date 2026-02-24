@@ -4,7 +4,7 @@ import 'package:grocery_app/core/theme/app_colors.dart';
 import 'package:grocery_app/core/services/location_service.dart';
 import 'package:grocery_app/data/models/location_model.dart';
 import 'package:grocery_app/features/auth/auth_service.dart';
-import 'package:grocery_app/features/location/map_picker_screen.dart';
+import 'package:grocery_app/features/location/manual_address_screen.dart';
 
 class LocationSelectionScreen extends StatefulWidget {
   const LocationSelectionScreen({super.key});
@@ -17,9 +17,9 @@ class LocationSelectionScreen extends StatefulWidget {
 class _LocationSelectionScreenState extends State<LocationSelectionScreen> {
   final _service = LocationService.instance;
 
-  Future<void> _openMapPicker() async {
+  Future<void> _openManualAddress() async {
     final address = await Navigator.of(context).push<String>(
-      MaterialPageRoute(builder: (_) => const MapPickerScreen()),
+      MaterialPageRoute(builder: (_) => const ManualAddressScreen()),
     );
     if (address != null && address.isNotEmpty) {
       await _service.addLocation(address);
@@ -88,7 +88,7 @@ class _LocationSelectionScreenState extends State<LocationSelectionScreen> {
                   ),
                   const SizedBox(height: 24),
                   ElevatedButton.icon(
-                    onPressed: _openMapPicker,
+                    onPressed: _openManualAddress,
                     icon: const Icon(Icons.add),
                     label: const Text('Add Address'),
                     style: ElevatedButton.styleFrom(
@@ -126,7 +126,7 @@ class _LocationSelectionScreenState extends State<LocationSelectionScreen> {
                   width: double.infinity,
                   height: 60,
                   child: ElevatedButton(
-                    onPressed: _openMapPicker,
+                    onPressed: _openManualAddress,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppColors.primaryGreen,
                       foregroundColor: AppColors.white,

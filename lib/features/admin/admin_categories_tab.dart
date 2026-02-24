@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:grocery_app/core/theme/app_colors.dart';
 import 'package:grocery_app/core/services/category_service.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 
 class AdminCategoriesTab extends StatefulWidget {
   const AdminCategoriesTab({super.key});
@@ -378,10 +379,10 @@ class _AdminCategoriesTabState extends State<AdminCategoriesTab> {
             child: imageUrl.isNotEmpty
                 ? ClipRRect(
                     borderRadius: BorderRadius.circular(11),
-                    child: Image.network(
-                      imageUrl,
+                    child: CachedNetworkImage(
+                      imageUrl: imageUrl,
                       fit: BoxFit.cover,
-                      errorBuilder: (_, __, ___) => const Icon(
+                      errorWidget: (_, __, ___) => const Icon(
                           Icons.category, color: AppColors.greyText),
                     ),
                   )

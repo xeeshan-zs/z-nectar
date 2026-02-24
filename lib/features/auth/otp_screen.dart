@@ -2,11 +2,14 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:grocery_app/core/theme/app_colors.dart';
-import 'package:grocery_app/features/auth/auth_service.dart';
 import 'package:grocery_app/features/auth/create_password_screen.dart';
 import 'package:grocery_app/features/auth/signup_screen.dart';
 
-class OtpScreen extends StatefulWidget {
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:grocery_app/core/services/providers.dart';
+import 'package:grocery_app/core/utils/snackbar_service.dart';
+
+class OtpScreen extends ConsumerStatefulWidget {
   final String contactValue;
   final ContactMethod method;
 
@@ -17,10 +20,10 @@ class OtpScreen extends StatefulWidget {
   });
 
   @override
-  State<OtpScreen> createState() => _OtpScreenState();
+  ConsumerState<OtpScreen> createState() => _OtpScreenState();
 }
 
-class _OtpScreenState extends State<OtpScreen> {
+class _OtpScreenState extends ConsumerState<OtpScreen> {
   static const int _otpLength = 6;
   final List<TextEditingController> _controllers =
       List.generate(_otpLength, (_) => TextEditingController());
@@ -78,7 +81,7 @@ class _OtpScreenState extends State<OtpScreen> {
 
     try {
       if (widget.method == ContactMethod.email) {
-        final valid = AuthService.instance.verifyEmailOtp(_otp);
+        final valid = ref.read(authServiceProvider).verifyEmailOtp(_otp);
         if (!valid) {
           setState(() => _errorMessage = 'Incorrect OTP. Please try again.');
           return;
@@ -93,7 +96,7 @@ class _OtpScreenState extends State<OtpScreen> {
         );
       } else {
         // Phone OTP via Firebase
-        final credential = await AuthService.instance.verifyPhoneOtp(_otp);
+        final credential = await ref.read(authServiceProvider).verifyPhoneOtp(_otp);
         if (credential == null) {
           setState(() => _errorMessage = 'Verification failed. Try again.');
           return;
@@ -118,14 +121,8 @@ class _OtpScreenState extends State<OtpScreen> {
   void _resendOtp() {
     if (_secondsLeft > 0) return;
     if (widget.method == ContactMethod.email) {
-      final otp = AuthService.instance.sendEmailOtp(widget.contactValue);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Dev: New OTP is $otp'),
-          backgroundColor: AppColors.primaryGreen,
-          duration: const Duration(seconds: 8),
-        ),
-      );
+      final otp = ref.read(authServiceProvider).sendEmailOtp(widget.contactValue);
+      SnackbarService.showSuccess(context, 'Dev: New OTP is $otp');
     }
     _startCountdown();
     setState(() => _errorMessage = null);

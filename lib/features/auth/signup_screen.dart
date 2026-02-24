@@ -1,18 +1,22 @@
 import 'package:flutter/material.dart';
 import 'package:grocery_app/core/theme/app_colors.dart';
-import 'package:grocery_app/features/auth/auth_service.dart';
 import 'package:grocery_app/features/auth/otp_screen.dart';
+
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:grocery_app/core/services/providers.dart';
+import 'package:grocery_app/core/utils/snackbar_service.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 
 enum ContactMethod { email, phone }
 
-class SignupScreen extends StatefulWidget {
+class SignupScreen extends ConsumerStatefulWidget {
   const SignupScreen({super.key});
 
   @override
-  State<SignupScreen> createState() => _SignupScreenState();
+  ConsumerState<SignupScreen> createState() => _SignupScreenState();
 }
 
-class _SignupScreenState extends State<SignupScreen> {
+class _SignupScreenState extends ConsumerState<SignupScreen> {
   final _formKey = GlobalKey<FormState>();
   final _contactCtrl = TextEditingController();
   ContactMethod _method = ContactMethod.email;
@@ -35,16 +39,10 @@ class _SignupScreenState extends State<SignupScreen> {
     try {
       if (_method == ContactMethod.email) {
         final email = _contactCtrl.text.trim();
-        final otp = AuthService.instance.sendEmailOtp(email);
+        final otp = ref.read(authServiceProvider).sendEmailOtp(email);
         if (!mounted) return;
         // In dev mode, show the OTP in a snackbar so you can test it
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Dev: Your OTP is $otp'),
-            duration: const Duration(seconds: 8),
-            backgroundColor: AppColors.primaryGreen,
-          ),
-        );
+        SnackbarService.showSuccess(context, 'Dev: Your OTP is $otp');
         Navigator.of(context).push(
           MaterialPageRoute(
             builder: (_) => OtpScreen(
@@ -57,7 +55,7 @@ class _SignupScreenState extends State<SignupScreen> {
         // Phone OTP via Firebase
         String phone = _contactCtrl.text.trim();
         if (!phone.startsWith('+')) phone = '+92$phone'; // default country code
-        await AuthService.instance.sendPhoneOtp(
+        await ref.read(authServiceProvider).sendPhoneOtp(
           phoneNumber: phone,
           onError: (err) {
             setState(() => _errorMessage = err);
@@ -104,11 +102,11 @@ class _SignupScreenState extends State<SignupScreen> {
               children: [
                 // ── Carrot Logo ───────────────────────────────────────
                 Center(
-                  child: Image.network(
-                    'https://img.icons8.com/emoji/96/carrot-emoji.png',
+                  child: CachedNetworkImage(
+                    imageUrl: 'https://img.icons8.com/emoji/96/carrot-emoji.png',
                     width: 50,
                     height: 50,
-                    errorBuilder: (_, __, ___) => const Icon(
+                    errorWidget: (_, __, ___) => const Icon(
                       Icons.eco,
                       color: AppColors.primaryGreen,
                       size: 50,

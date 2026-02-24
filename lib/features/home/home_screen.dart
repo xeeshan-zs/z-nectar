@@ -10,6 +10,7 @@ import 'package:grocery_app/data/models/product_model.dart';
 import 'package:grocery_app/data/models/banner_model.dart';
 import 'package:grocery_app/features/location/location_selection_screen.dart';
 import 'package:grocery_app/core/widgets/product_card.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -29,11 +30,16 @@ class _HomeScreenState extends State<HomeScreen> {
           children: [
             const SizedBox(height: 15),
             // Carrot Icon
-            Image.network(
-              'https://img.icons8.com/emoji/96/carrot-emoji.png',
+            CachedNetworkImage(
+              imageUrl: 'https://img.icons8.com/emoji/96/carrot-emoji.png',
               width: 35,
               height: 35,
-              errorBuilder: (_, __, ___) => const Icon(
+              placeholder: (context, url) => const SizedBox(
+                width: 35,
+                height: 35,
+                child: CircularProgressIndicator(),
+              ),
+              errorWidget: (_, __, ___) => const Icon(
                 Icons.eco,
                 color: AppColors.primaryGreen,
                 size: 35,
@@ -367,12 +373,20 @@ class _HomeScreenState extends State<HomeScreen> {
                               topLeft: Radius.circular(16),
                               bottomLeft: Radius.circular(16),
                             ),
-                            child: Image.network(
-                              product.imageUrl,
+                            child: CachedNetworkImage(
+                              imageUrl: product.imageUrl,
                               width: 140,
                               height: 180,
                               fit: BoxFit.cover,
-                              errorBuilder: (_, __, ___) => Container(
+                              placeholder: (context, url) => Container(
+                                width: 140,
+                                height: 180,
+                                color: AppColors.lightGrey,
+                                child: const Center(
+                                  child: CircularProgressIndicator(),
+                                ),
+                              ),
+                              errorWidget: (_, __, ___) => Container(
                                 width: 140,
                                 height: 180,
                                 color: AppColors.lightGrey,
@@ -479,12 +493,20 @@ class _HomeScreenState extends State<HomeScreen> {
           const SizedBox(width: 5),
           ClipRRect(
             borderRadius: BorderRadius.circular(10),
-            child: Image.network(
-              imageUrl,
+            child: CachedNetworkImage(
+              imageUrl: imageUrl,
               width: 110,
               height: 100,
               fit: BoxFit.cover,
-              errorBuilder: (_, __, ___) => Container(
+              placeholder: (context, url) => Container(
+                width: 110,
+                height: 100,
+                color: AppColors.lightGrey,
+                child: const Center(
+                  child: CircularProgressIndicator(),
+                ),
+              ),
+              errorWidget: (_, __, ___) => Container(
                 width: 110,
                 height: 100,
                 color: AppColors.lightGrey,

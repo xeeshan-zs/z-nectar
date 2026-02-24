@@ -1,19 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:grocery_app/core/theme/app_colors.dart';
-import 'package:grocery_app/core/services/user_role_service.dart';
 import 'package:grocery_app/features/admin/admin_dashboard_screen.dart';
-import 'package:grocery_app/features/auth/auth_service.dart';
 import 'package:grocery_app/features/auth/login_screen.dart';
 import 'package:grocery_app/features/dashboard/dashboard_screen.dart';
 
-class SplashScreen extends StatefulWidget {
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:grocery_app/core/services/providers.dart';
+
+class SplashScreen extends ConsumerStatefulWidget {
   const SplashScreen({super.key});
 
   @override
-  State<SplashScreen> createState() => _SplashScreenState();
+  ConsumerState<SplashScreen> createState() => _SplashScreenState();
 }
 
-class _SplashScreenState extends State<SplashScreen>
+class _SplashScreenState extends ConsumerState<SplashScreen>
     with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<double> _fadeAnim;
@@ -42,9 +43,9 @@ class _SplashScreenState extends State<SplashScreen>
     // Check if already logged in and route by role
     Future.delayed(const Duration(milliseconds: 1800), () async {
       if (!mounted) return;
-      final user = AuthService.instance.currentUser;
+      final user = ref.read(authServiceProvider).currentUser;
       if (user != null) {
-        final role = await UserRoleService.instance.getRole(user.uid);
+        final role = await ref.read(userRoleServiceProvider).getRole(user.uid);
         if (!mounted) return;
         final destination = role == 'admin'
             ? const AdminDashboardScreen()

@@ -289,19 +289,18 @@ class _AdminOrdersTabState extends State<AdminOrdersTab> {
               const SizedBox(width: 8),
               // Advance status
               if (order.nextStatus != null)
-                ElevatedButton.icon(
+                TextButton.icon(
                   onPressed: () => OrderService.instance
                       .updateStatus(order.id, order.nextStatus!),
                   icon: const Icon(Icons.arrow_forward_rounded, size: 16),
                   label: Text(_nextActionLabel(order.status),
                       style: const TextStyle(fontSize: 13)),
-                  style: ElevatedButton.styleFrom(
+                  style: TextButton.styleFrom(
                     backgroundColor: AppColors.primaryGreen,
                     foregroundColor: AppColors.white,
                     shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(10)),
                     padding: const EdgeInsets.symmetric(horizontal: 14),
-                    elevation: 0,
                   ),
                 ),
               const Spacer(),
@@ -328,13 +327,13 @@ class _AdminOrdersTabState extends State<AdminOrdersTab> {
                                 style:
                                     TextStyle(color: AppColors.greyText)),
                           ),
-                          ElevatedButton(
+                          TextButton(
                             onPressed: () {
                               OrderService.instance
                                   .cancelOrder(order.id);
                               Navigator.of(ctx).pop();
                             },
-                            style: ElevatedButton.styleFrom(
+                            style: TextButton.styleFrom(
                                 backgroundColor: Colors.red,
                                 foregroundColor: Colors.white,
                                 shape: RoundedRectangleBorder(

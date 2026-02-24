@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:grocery_app/core/theme/app_colors.dart';
-import 'package:grocery_app/core/services/user_role_service.dart';
-import 'package:grocery_app/features/auth/auth_service.dart';
 import 'package:grocery_app/features/dashboard/dashboard_screen.dart';
 
-class CreatePasswordScreen extends StatefulWidget {
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:grocery_app/core/services/providers.dart';
+
+class CreatePasswordScreen extends ConsumerStatefulWidget {
   final String email;
   final bool isPhone;
 
@@ -15,10 +16,10 @@ class CreatePasswordScreen extends StatefulWidget {
   });
 
   @override
-  State<CreatePasswordScreen> createState() => _CreatePasswordScreenState();
+  ConsumerState<CreatePasswordScreen> createState() => _CreatePasswordScreenState();
 }
 
-class _CreatePasswordScreenState extends State<CreatePasswordScreen> {
+class _CreatePasswordScreenState extends ConsumerState<CreatePasswordScreen> {
   final _formKey = GlobalKey<FormState>();
   final _passwordCtrl = TextEditingController();
   final _confirmCtrl = TextEditingController();
@@ -44,9 +45,9 @@ class _CreatePasswordScreenState extends State<CreatePasswordScreen> {
     try {
       if (widget.isPhone) {
         // Phone users are already signed in via Firebase Phone Auth.
-        final user = AuthService.instance.currentUser;
+        final user = ref.read(authServiceProvider).currentUser;
         if (user != null) {
-          await UserRoleService.instance.ensureUserDoc(
+          await ref.read(userRoleServiceProvider).ensureUserDoc(
             uid: user.uid,
             email: widget.email,
           );
@@ -60,12 +61,12 @@ class _CreatePasswordScreenState extends State<CreatePasswordScreen> {
       }
 
       // Email sign-up
-      final cred = await AuthService.instance.createAccount(
+      final cred = await ref.read(authServiceProvider).createAccount(
         email: widget.email,
         password: _passwordCtrl.text,
       );
       // Create user doc with 'customer' role
-      await UserRoleService.instance.ensureUserDoc(
+      await ref.read(userRoleServiceProvider).ensureUserDoc(
         uid: cred.user!.uid,
         email: widget.email,
       );

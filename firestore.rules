@@ -1,0 +1,45 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function isAdmin() {
+      return isAuthenticated() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+
+    function isOwner(uid) {
+      return isAuthenticated() && request.auth.uid == uid;
+    }
+
+    // Rules for 'users' collection
+    match /users/{userId} {
+      // Anyone authenticated can read user documents (e.g., to fetch their own role or for admins to list)
+      allow read: if isAuthenticated();
+      
+      // Admins can do anything
+      allow write: if isAdmin();
+      
+      // Users can create their own document but CANNOT set their role to 'admin'
+      allow create: if isOwner(userId) 
+                    && request.resource.data.role == 'customer';
+                    
+      // Users can update their own document, but CANNOT change their 'role' field
+      allow update: if isOwner(userId) 
+                    && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['role']));
+                    
+      allow delete: if isOwner(userId);
+    }
+    
+    // Add other necessary collection rules below
+    match /{document=**} {
+      // Allow read/write to all other collections temporarily. 
+      // TODO: secure these collections as well based on business logic.
+      allow read, write: if isAuthenticated();
+    }
+  }
+}

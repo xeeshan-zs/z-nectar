@@ -62,16 +62,26 @@ class OrderModel {
       id: id,
       userId: map['userId'] as String? ?? '',
       userEmail: map['userEmail'] as String? ?? '',
-      items: (map['items'] as List<dynamic>?)
-              ?.map((e) => OrderItem.fromMap(e as Map<String, dynamic>))
-              .toList() ??
-          [],
+      items: (map['items'] as List<dynamic>?)?.map((e) {
+        if (e is Map) {
+          return OrderItem.fromMap(Map<String, dynamic>.from(e));
+        }
+        return const OrderItem(productId: '', name: 'Unknown', qty: 1, price: 0);
+      }).toList() ?? [],
       total: (map['total'] as num?)?.toDouble() ?? 0,
       status: map['status'] as String? ?? 'pending',
       paymentMethod: map['paymentMethod'] as String? ?? 'cod',
       address: map['address'] as String? ?? '',
-      createdAt: map['createdAt'] as Timestamp?,
-      updatedAt: map['updatedAt'] as Timestamp?,
+      createdAt: map['createdAt'] is Timestamp 
+          ? map['createdAt'] as Timestamp 
+          : (map['createdAt'] != null && map['createdAt'].toString().isNotEmpty)
+              ? Timestamp.fromDate((map['createdAt'] as dynamic).toDate())
+              : null,
+      updatedAt: map['updatedAt'] is Timestamp 
+          ? map['updatedAt'] as Timestamp 
+          : (map['updatedAt'] != null && map['updatedAt'].toString().isNotEmpty)
+              ? Timestamp.fromDate((map['updatedAt'] as dynamic).toDate())
+              : null,
     );
   }
 
