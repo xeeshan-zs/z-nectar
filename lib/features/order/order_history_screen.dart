@@ -5,13 +5,31 @@ import 'package:grocery_app/core/services/order_service.dart';
 import 'package:grocery_app/data/models/order_model.dart';
 import 'package:intl/intl.dart';
 
-class OrderHistoryScreen extends StatelessWidget {
+class OrderHistoryScreen extends StatefulWidget {
   const OrderHistoryScreen({super.key});
 
   @override
+  State<OrderHistoryScreen> createState() => _OrderHistoryScreenState();
+}
+
+class _OrderHistoryScreenState extends State<OrderHistoryScreen> {
+  User? _currentUser;
+  late final Stream<List<OrderModel>> _ordersStream;
+
+  @override
+  void initState() {
+    super.initState();
+    _currentUser = FirebaseAuth.instance.currentUser;
+    if (_currentUser != null) {
+      _ordersStream = OrderService.instance.getOrdersByUser(_currentUser!.uid);
+    } else {
+      _ordersStream = const Stream.empty();
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final user = FirebaseAuth.instance.currentUser;
-    if (user == null) {
+    if (_currentUser == null) {
       return Scaffold(
         appBar: AppBar(title: const Text('My Orders')),
         body: const Center(child: Text('Please log in to view your orders')),
@@ -38,7 +56,7 @@ class OrderHistoryScreen extends StatelessWidget {
         centerTitle: true,
       ),
       body: StreamBuilder<List<OrderModel>>(
-        stream: OrderService.instance.getOrdersByUser(user.uid),
+        stream: _ordersStream,
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(
@@ -193,7 +211,7 @@ class OrderHistoryScreen extends StatelessWidget {
                       ),
                     ),
                     Text(
-                      '\$${(item.price * item.qty).toStringAsFixed(2)}',
+                      'Rs ${(item.price * item.qty).toStringAsFixed(2)}',
                       style: const TextStyle(
                           fontSize: 14,
                           fontWeight: FontWeight.w600,
@@ -215,7 +233,7 @@ class OrderHistoryScreen extends StatelessWidget {
                     fontSize: 13, color: AppColors.greyText),
               ),
               Text(
-                'Total: \$${order.total.toStringAsFixed(2)}',
+                'Total: Rs ${order.total.toStringAsFixed(2)}',
                 style: const TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
@@ -232,7 +250,81 @@ class OrderHistoryScreen extends StatelessWidget {
               width: double.infinity,
               child: OutlinedButton(
                 onPressed: () async {
-                  await OrderService.instance.cancelOrder(order.id);
+                  final confirm = await showDialog<bool>(
+                    context: context,
+                    builder: (ctx) => AlertDialog(
+                      backgroundColor: AppColors.white,
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16)),
+                      title: const Text('Cancel Order',
+                          style: TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.darkText)),
+                      contentPadding: const EdgeInsets.fromLTRB(24, 20, 24, 0),
+                      content: const Text(
+                          'Are you sure you want to cancel this order?',
+                          style: TextStyle(
+                              fontSize: 16, color: AppColors.greyText)),
+                      actionsPadding:
+                          const EdgeInsets.fromLTRB(24, 24, 24, 24),
+                      actions: [
+                        Row(
+                          children: [
+                            Expanded(
+                              child: OutlinedButton(
+                                onPressed: () => Navigator.of(ctx).pop(false),
+                                style: OutlinedButton.styleFrom(
+                                  padding:
+                                      const EdgeInsets.symmetric(vertical: 16),
+                                  side: const BorderSide(
+                                      color: AppColors.borderGrey),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                ),
+                                child: const Text(
+                                  'No',
+                                  style: TextStyle(
+                                    color: AppColors.darkText,
+                                    fontWeight: FontWeight.w600,
+                                    fontSize: 16,
+                                  ),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: ElevatedButton(
+                                onPressed: () => Navigator.of(ctx).pop(true),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: const Color(0xFFF35B5B),
+                                  padding:
+                                      const EdgeInsets.symmetric(vertical: 16),
+                                  elevation: 0,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                ),
+                                child: const Text(
+                                  'Cancel Order',
+                                  style: TextStyle(
+                                    color: AppColors.white,
+                                    fontWeight: FontWeight.w600,
+                                    fontSize: 14,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  );
+
+                  if (confirm == true) {
+                    await OrderService.instance.cancelOrder(order.id);
+                  }
                 },
                 style: OutlinedButton.styleFrom(
                   foregroundColor: Colors.red,

@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../../features/auth/auth_service.dart';
 import 'user_role_service.dart';
+import 'promo_service.dart';
 
 /// Provider for AuthService
 final authServiceProvider = Provider<AuthService>((ref) {
@@ -19,4 +20,9 @@ final authStateProvider = StreamProvider<User?>((ref) {
 /// Provider for UserRoleService
 final userRoleServiceProvider = Provider<UserRoleService>((ref) {
   return UserRoleService.instance;
+});
+
+/// Provider for PromoService
+final promoServiceProvider = Provider<PromoService>((ref) {
+  return PromoService.instance;
 });

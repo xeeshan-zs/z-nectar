@@ -5,6 +5,7 @@ import 'package:grocery_app/core/services/product_service.dart';
 import 'package:grocery_app/data/models/product_model.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:grocery_app/core/utils/snackbar_service.dart';
+import 'package:grocery_app/core/services/cloudinary_service.dart';
 
 class AddEditProductScreen extends StatefulWidget {
   final ProductModel? product; // null = add mode
@@ -92,6 +93,25 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
     super.dispose();
   }
 
+  Future<void> _pickAndUploadImage() async {
+    setState(() => _loading = true);
+
+    try {
+      final url = await CloudinaryService.instance.pickAndUploadImage();
+      
+      if (url != null) {
+        setState(() {
+          _imageCtrl.text = url;
+        });
+        if (mounted) SnackbarService.showSuccess(context, 'Image uploaded successfully!');
+      }
+    } catch (e) {
+      if (mounted) SnackbarService.showError(context, 'Error uploading image: $e');
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
   Future<void> _save() async {
     if (!_formKey.currentState!.validate()) return;
     if (_selectedCategoryId == null) {
@@ -118,6 +138,9 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
 
     try {
       if (_isEdit) {
+        if (widget.product!.imageUrl != product.imageUrl && widget.product!.imageUrl.isNotEmpty) {
+           await CloudinaryService.instance.deleteImageByUrl(widget.product!.imageUrl);
+        }
         await ProductService.instance
             .updateProduct(product.id, product.toMap());
       } else {
@@ -180,8 +203,29 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
                 title: 'Image',
                 icon: Icons.image_outlined,
                 children: [
-                  _buildField(
-                      _imageCtrl, 'Image URL', Icons.link_rounded),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _buildField(
+                            _imageCtrl, 'Image URL', Icons.link_rounded),
+                      ),
+                      const SizedBox(width: 8),
+                      Container(
+                        height: 54,
+                        width: 54,
+                        decoration: BoxDecoration(
+                          color: AppColors.primaryGreen.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: IconButton(
+                          onPressed: _loading ? null : _pickAndUploadImage,
+                          icon: const Icon(Icons.upload_file),
+                          color: AppColors.primaryGreen,
+                          tooltip: 'Upload from Gallery',
+                        ),
+                      ),
+                    ],
+                  ),
                   const SizedBox(height: 12),
                   // Image preview
                   Builder(builder: (_) {

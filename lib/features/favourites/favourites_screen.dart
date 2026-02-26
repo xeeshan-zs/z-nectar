@@ -11,13 +11,33 @@ import 'package:grocery_app/core/utils/snackbar_service.dart';
 import 'package:grocery_app/data/models/product_model.dart';
 import 'package:grocery_app/features/product_detail/product_detail_screen.dart';
 
-class FavouritesScreen extends StatelessWidget {
+class FavouritesScreen extends StatefulWidget {
   const FavouritesScreen({super.key});
 
   @override
+  State<FavouritesScreen> createState() => _FavouritesScreenState();
+}
+
+class _FavouritesScreenState extends State<FavouritesScreen> {
+  User? _currentUser;
+  late final Stream<Set<String>> _favIdsStream;
+  late final Stream<List<ProductModel>> _productsStream;
+
+  @override
+  void initState() {
+    super.initState();
+    _currentUser = FirebaseAuth.instance.currentUser;
+    if (_currentUser != null) {
+      _favIdsStream = FavouritesService.instance.getFavouriteIds(_currentUser!.uid);
+    } else {
+      _favIdsStream = const Stream.empty();
+    }
+    _productsStream = ProductService.instance.getProducts();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final user = FirebaseAuth.instance.currentUser;
-    if (user == null) {
+    if (_currentUser == null) {
       return const Center(
         child: Text('Please log in to see your favourites',
             style: TextStyle(fontSize: 16, color: AppColors.greyText)),
@@ -40,7 +60,7 @@ class FavouritesScreen extends StatelessWidget {
           const Divider(),
           Expanded(
             child: StreamBuilder<Set<String>>(
-              stream: FavouritesService.instance.getFavouriteIds(user.uid),
+              stream: _favIdsStream,
               builder: (context, favSnapshot) {
                 if (favSnapshot.connectionState == ConnectionState.waiting) {
                   return const Center(
@@ -78,7 +98,7 @@ class FavouritesScreen extends StatelessWidget {
 
                 // Stream all products, filter to favourites
                 return StreamBuilder<List<ProductModel>>(
-                  stream: ProductService.instance.getProducts(),
+                  stream: _productsStream,
                   builder: (context, prodSnapshot) {
                     if (prodSnapshot.connectionState ==
                         ConnectionState.waiting) {
@@ -111,7 +131,7 @@ class FavouritesScreen extends StatelessWidget {
                             itemBuilder: (context, index) {
                               return _FavouriteItemTile(
                                 product: favourites[index],
-                                userId: user.uid,
+                                userId: _currentUser!.uid,
                               );
                             },
                           ),
@@ -128,7 +148,7 @@ class FavouritesScreen extends StatelessWidget {
                             onPressed: () async {
                               for (final p in favourites) {
                                 await CartService.instance
-                                    .addToCart(user.uid, p);
+                                    .addToCart(_currentUser!.uid, p);
                               }
                               if (context.mounted) {
                                 SnackbarService.showSuccess(context, 'All favourites added to cart!');
@@ -215,7 +235,7 @@ class _FavouriteItemTile extends StatelessWidget {
               ),
             ),
             Text(
-              '\$${product.price.toStringAsFixed(2)}',
+              'Rs ${product.price.toStringAsFixed(2)}',
               style: const TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.bold,

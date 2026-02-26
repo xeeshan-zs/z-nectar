@@ -6,6 +6,7 @@ import 'package:grocery_app/features/admin/admin_orders_tab.dart';
 import 'package:grocery_app/features/admin/admin_customers_tab.dart';
 import 'package:grocery_app/features/admin/admin_banners_tab.dart';
 import 'package:grocery_app/features/admin/admin_categories_tab.dart';
+import 'package:grocery_app/features/admin/admin_promos_tab.dart';
 import 'package:grocery_app/features/auth/auth_service.dart';
 import 'package:grocery_app/features/auth/splash_screen.dart';
 
@@ -26,6 +27,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     'Customers',
     'Banners',
     'Categories',
+    'Promos',
   ];
 
   final List<Widget> _tabs = const [
@@ -35,6 +37,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     AdminCustomersTab(),
     AdminBannersTab(),
     AdminCategoriesTab(),
+    AdminPromosTab(),
   ];
 
   @override
@@ -157,7 +160,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceAround,
-              children: List.generate(6, (i) {
+              children: List.generate(7, (i) {
                 final isActive = _currentIndex == i;
                 return _buildNavItem(i, isActive);
               }),
@@ -176,6 +179,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       Icons.people_outline,
       Icons.view_carousel_outlined,
       Icons.category_outlined,
+      Icons.local_offer_outlined,
     ];
     const activeIcons = [
       Icons.dashboard,
@@ -184,8 +188,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       Icons.people,
       Icons.view_carousel,
       Icons.category,
+      Icons.local_offer,
     ];
-    const labels = ['Overview', 'Products', 'Orders', 'Customers', 'Banners', 'Categories'];
+    const labels = ['Overview', 'Products', 'Orders', 'Customers', 'Banners', 'Categories', 'Promos'];
 
     return Expanded(
       child: GestureDetector(
@@ -200,7 +205,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
               AnimatedContainer(
                 duration: const Duration(milliseconds: 250),
                 padding: EdgeInsets.symmetric(
-                  horizontal: isActive ? 16 : 0,
+                  horizontal: isActive ? 12 : 0,
                   vertical: isActive ? 6 : 4,
                 ),
                 decoration: BoxDecoration(
@@ -216,12 +221,16 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                 ),
               ),
               const SizedBox(height: 2),
-              Text(
-                labels[index],
-                style: TextStyle(
-                  fontSize: 10,
-                  fontWeight: isActive ? FontWeight.w700 : FontWeight.w500,
-                  color: isActive ? AppColors.primaryGreen : AppColors.greyText,
+              FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text(
+                  labels[index],
+                  maxLines: 1,
+                  style: TextStyle(
+                    fontSize: 10,
+                    fontWeight: isActive ? FontWeight.w700 : FontWeight.w500,
+                    color: isActive ? AppColors.primaryGreen : AppColors.greyText,
+                  ),
                 ),
               ),
             ],
@@ -238,9 +247,10 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         backgroundColor: AppColors.white,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: const Text('Log Out',
-            style: TextStyle(fontWeight: FontWeight.bold)),
-        content: const Text('Are you sure you want to log out?'),
-        actionsPadding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
+            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: AppColors.darkText)),
+        contentPadding: const EdgeInsets.fromLTRB(24, 20, 24, 0),
+        content: const Text('Are you sure you want to log out?', style: TextStyle(fontSize: 16, color: AppColors.greyText)),
+        actionsPadding: const EdgeInsets.fromLTRB(24, 24, 24, 24),
         actions: [
           Row(
             children: [
@@ -250,12 +260,12 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                   style: OutlinedButton.styleFrom(
                     foregroundColor: AppColors.darkText,
                     side: const BorderSide(color: AppColors.borderGrey),
-                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    padding: const EdgeInsets.symmetric(vertical: 16),
                     shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12)),
                   ),
                   child: const Text('Cancel',
-                      style: TextStyle(fontWeight: FontWeight.w600)),
+                      style: TextStyle(fontWeight: FontWeight.w600, fontSize: 16)),
                 ),
               ),
               const SizedBox(width: 12),
@@ -272,15 +282,15 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                     }
                   },
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.redAccent,
+                    backgroundColor: const Color(0xFFF35B5B), // Soft Red
                     foregroundColor: AppColors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    padding: const EdgeInsets.symmetric(vertical: 16),
                     shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12)),
                     elevation: 0,
                   ),
                   child: const Text('Log Out',
-                      style: TextStyle(fontWeight: FontWeight.w600)),
+                      style: TextStyle(fontWeight: FontWeight.w600, fontSize: 16)),
                 ),
               ),
             ],

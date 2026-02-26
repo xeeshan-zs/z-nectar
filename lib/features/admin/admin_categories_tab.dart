@@ -3,6 +3,9 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:grocery_app/core/theme/app_colors.dart';
 import 'package:grocery_app/core/services/category_service.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:flutter_colorpicker/flutter_colorpicker.dart';
+import 'package:grocery_app/core/services/cloudinary_service.dart';
+import 'package:grocery_app/core/utils/snackbar_service.dart';
 
 class AdminCategoriesTab extends StatefulWidget {
   const AdminCategoriesTab({super.key});
@@ -45,17 +48,49 @@ class _AdminCategoriesTabState extends State<AdminCategoriesTab> {
     }
   }
 
-  Color _parseColor(String hex, Color fallback) {
+  Color _parseColor(String colorStr, Color fallback) {
     try {
-      final cleaned = hex.replaceAll('#', '');
+      final str = colorStr.trim().toLowerCase();
+      
+      // Handle RGB formatting: rgb(238, 247, 241)
+      if (str.startsWith('rgb(') && str.endsWith(')')) {
+        final content = str.substring(4, str.length - 1);
+        final parts = content.split(',').map((e) => e.trim()).toList();
+        if (parts.length == 3) {
+          return Color.fromRGBO(
+            int.parse(parts[0]), 
+            int.parse(parts[1]), 
+            int.parse(parts[2]), 
+            1.0
+          );
+        }
+      }
+      
+      // Handle HSL formatting: hsl(140, 36%, 95%)
+      if (str.startsWith('hsl(') && str.endsWith(')')) {
+        final content = str.substring(4, str.length - 1);
+        final parts = content.split(',').map((e) => e.trim()).toList();
+        if (parts.length == 3) {
+          final h = double.parse(parts[0]);
+          final s = double.parse(parts[1].replaceAll('%', '')) / 100.0;
+          final l = double.parse(parts[2].replaceAll('%', '')) / 100.0;
+          return HSLColor.fromAHSL(1.0, h, s, l).toColor();
+        }
+      }
+
+      // Handle HEX formatting
+      final cleaned = str.replaceAll('#', '');
       if (cleaned.length == 6) {
         return Color(int.parse('FF$cleaned', radix: 16));
+      } else if (cleaned.length == 8) {
+        return Color(int.parse(cleaned, radix: 16));
       }
     } catch (_) {}
     return fallback;
   }
 
   void _showAddEditDialog({String? id, Map<String, dynamic>? data}) {
+    bool _isImageUploading = false;
     final nameCtrl = TextEditingController(text: data?['name'] ?? '');
     final imageCtrl = TextEditingController(text: data?['imageUrl'] ?? '');
     final bgColorCtrl =
@@ -89,128 +124,131 @@ class _AdminCategoriesTabState extends State<AdminCategoriesTab> {
                 children: [
                   _dialogField(nameCtrl, 'Name', Icons.label_outline),
                   const SizedBox(height: 12),
-                  _dialogField(imageCtrl, 'Image URL', Icons.image_outlined),
-                  const SizedBox(height: 12),
-                  // BG Color with preview
                   Row(
                     children: [
                       Expanded(
-                        child: TextField(
-                          controller: bgColorCtrl,
-                          onChanged: (_) => setDialogState(() {}),
-                          decoration: InputDecoration(
-                            labelText: 'BG Color',
-                            labelStyle:
-                                const TextStyle(color: AppColors.greyText),
-                            prefixIcon: const Icon(Icons.palette_outlined,
-                                color: AppColors.greyText, size: 20),
-                            filled: true,
-                            fillColor: AppColors.lightGrey,
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
-                              borderSide: BorderSide.none,
-                            ),
-                            focusedBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
-                              borderSide: const BorderSide(
-                                  color: AppColors.primaryGreen, width: 1.5),
-                            ),
-                          ),
-                        ),
+                        child: _dialogField(imageCtrl, 'Image URL', Icons.image_outlined),
                       ),
                       const SizedBox(width: 8),
                       Container(
-                        width: 36,
-                        height: 36,
+                        height: 52,
+                        width: 52,
                         decoration: BoxDecoration(
-                          color: bgPreview,
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: AppColors.borderGrey),
+                          color: AppColors.primaryGreen.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: IconButton(
+                          onPressed: _isImageUploading ? null : () async {
+                              setDialogState(() => _isImageUploading = true);
+                              final url = await CloudinaryService.instance.pickAndUploadImage();
+                              if (url != null) {
+                                setDialogState(() => imageCtrl.text = url);
+                                if (ctx.mounted) SnackbarService.showSuccess(ctx, 'Image uploaded!');
+                              } else {
+                                if (ctx.mounted) SnackbarService.showError(ctx, 'Upload failed/canceled');
+                              }
+                              setDialogState(() => _isImageUploading = false);
+                          },
+                          icon: _isImageUploading 
+                                ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2)) 
+                                : const Icon(Icons.upload_file),
+                          color: AppColors.primaryGreen,
                         ),
                       ),
                     ],
                   ),
                   const SizedBox(height: 12),
-                  // Border Color with preview
-                  Row(
-                    children: [
-                      Expanded(
-                        child: TextField(
-                          controller: borderColorCtrl,
-                          onChanged: (_) => setDialogState(() {}),
-                          decoration: InputDecoration(
-                            labelText: 'Border Color',
-                            labelStyle:
-                                const TextStyle(color: AppColors.greyText),
-                            prefixIcon: const Icon(Icons.border_color_outlined,
-                                color: AppColors.greyText, size: 20),
-                            filled: true,
-                            fillColor: AppColors.lightGrey,
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
-                              borderSide: BorderSide.none,
-                            ),
-                            focusedBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
-                              borderSide: const BorderSide(
-                                  color: AppColors.primaryGreen, width: 1.5),
-                            ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Container(
-                        width: 36,
-                        height: 36,
-                        decoration: BoxDecoration(
-                          color: borderPreview,
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: AppColors.borderGrey),
-                        ),
-                      ),
-                    ],
+                  // BG Color Picker
+                  _colorPickerRow(
+                    'Background Color',
+                    bgPreview,
+                    bgColorCtrl,
+                    setDialogState,
+                  ),
+                  const SizedBox(height: 12),
+                  // Border Color Picker
+                  _colorPickerRow(
+                    'Border Color',
+                    borderPreview,
+                    borderColorCtrl,
+                    setDialogState,
                   ),
                 ],
               ),
             ),
+            actionsPadding: const EdgeInsets.fromLTRB(24, 24, 24, 24),
             actions: [
-              TextButton(
-                onPressed: () => Navigator.of(ctx).pop(),
-                child: const Text('Cancel',
-                    style: TextStyle(color: AppColors.greyText)),
-              ),
-              ElevatedButton(
-                onPressed: () async {
-                  final name = nameCtrl.text.trim();
-                  final imageUrl = imageCtrl.text.trim();
-                  if (name.isEmpty) return;
-
-                  if (id == null) {
-                    await _service.addCategory(
-                      name: name,
-                      imageUrl: imageUrl,
-                      bgColor: bgColorCtrl.text.trim(),
-                      borderColor: borderColorCtrl.text.trim(),
-                    );
-                  } else {
-                    await _service.updateCategory(id, {
-                      'name': name,
-                      'imageUrl': imageUrl,
-                      'bgColor': bgColorCtrl.text.trim(),
-                      'borderColor': borderColorCtrl.text.trim(),
-                    });
-                  }
-                  if (ctx.mounted) Navigator.of(ctx).pop();
-                  _loadProductCounts(); // Refresh counts
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primaryGreen,
-                  foregroundColor: AppColors.white,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: () => Navigator.of(ctx).pop(),
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        side: const BorderSide(color: AppColors.borderGrey),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      child: const Text(
+                        'Cancel',
+                        style: TextStyle(
+                          color: AppColors.darkText,
+                          fontWeight: FontWeight.w600,
+                          fontSize: 16,
+                        ),
+                      ),
+                    ),
                   ),
-                ),
-                child: Text(id == null ? 'Add' : 'Save'),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: () async {
+                        final name = nameCtrl.text.trim();
+                        final imageUrl = imageCtrl.text.trim();
+                        if (name.isEmpty) return;
+
+                        if (id == null) {
+                          await _service.addCategory(
+                            name: name,
+                            imageUrl: imageUrl,
+                            bgColor: bgColorCtrl.text.trim(),
+                            borderColor: borderColorCtrl.text.trim(),
+                          );
+                        } else {
+                          final oldImageUrl = data?['imageUrl'] as String? ?? '';
+                          if (oldImageUrl != imageUrl && oldImageUrl.isNotEmpty) {
+                            await CloudinaryService.instance.deleteImageByUrl(oldImageUrl);
+                          }
+                          await _service.updateCategory(id, {
+                            'name': name,
+                            'imageUrl': imageUrl,
+                            'bgColor': bgColorCtrl.text.trim(),
+                            'borderColor': borderColorCtrl.text.trim(),
+                          });
+                        }
+                        if (ctx.mounted) Navigator.of(ctx).pop();
+                        _loadProductCounts(); // Refresh counts
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primaryGreen,
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      child: Text(
+                        id == null ? 'Add' : 'Save',
+                        style: const TextStyle(
+                          color: AppColors.white,
+                          fontWeight: FontWeight.w600,
+                          fontSize: 16,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ],
           );
@@ -239,6 +277,99 @@ class _AdminCategoriesTabState extends State<AdminCategoriesTab> {
               const BorderSide(color: AppColors.primaryGreen, width: 1.5),
         ),
       ),
+    );
+  }
+
+  Widget _colorPickerRow(
+    String label,
+    Color currentColor,
+    TextEditingController controller,
+    StateSetter setDialogState,
+  ) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: const TextStyle(
+            color: AppColors.darkText,
+            fontWeight: FontWeight.w500,
+            fontSize: 14,
+          ),
+        ),
+        const SizedBox(height: 8),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Expanded(
+              child: TextField(
+                controller: controller,
+                style: const TextStyle(fontSize: 14, color: AppColors.darkText),
+                decoration: InputDecoration(
+                  hintText: 'HEX, rgb(), or hsl()',
+                  hintStyle: TextStyle(
+                    color: AppColors.greyText.withValues(alpha: 0.5),
+                    fontSize: 13,
+                  ),
+                  filled: true,
+                  fillColor: AppColors.lightGrey,
+                  contentPadding:
+                      const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide.none,
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: const BorderSide(
+                        color: AppColors.primaryGreen, width: 1.5),
+                  ),
+                ),
+                onChanged: (_) => setDialogState(() {}),
+              ),
+            ),
+            const SizedBox(width: 12),
+            GestureDetector(
+              onTap: () {
+                showDialog(
+                  context: context,
+                  builder: (ctx) => AlertDialog(
+                    title: const Text('Pick a color'),
+                    content: SingleChildScrollView(
+                      child: ColorPicker(
+                        pickerColor: currentColor,
+                        onColorChanged: (c) {
+                          setDialogState(() {
+                            controller.text =
+                                '#${c.value.toRadixString(16).padLeft(8, '0').toUpperCase()}';
+                          });
+                        },
+                        portraitOnly: true,
+                      ),
+                    ),
+                    actions: [
+                      TextButton(
+                        child: const Text('Done',
+                            style: TextStyle(color: AppColors.primaryGreen)),
+                        onPressed: () => Navigator.of(ctx).pop(),
+                      ),
+                    ],
+                  ),
+                );
+              },
+              child: Container(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(
+                  color: currentColor,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: AppColors.borderGrey, width: 1.5),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ],
     );
   }
 
@@ -467,28 +598,65 @@ class _AdminCategoriesTabState extends State<AdminCategoriesTab> {
                 builder: (ctx) => AlertDialog(
                   shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(16)),
-                  title: const Text('Delete Category?'),
-                  content: Text('Delete "$name"? This cannot be undone.'),
+                  title: const Text('Delete Category?',
+                      style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: AppColors.darkText)),
+                  contentPadding: const EdgeInsets.fromLTRB(24, 20, 24, 0),
+                  content: Text('Delete "$name"? This cannot be undone.', style: const TextStyle(fontSize: 16, color: AppColors.greyText)),
+                  actionsPadding: const EdgeInsets.fromLTRB(24, 24, 24, 24),
                   actions: [
-                    TextButton(
-                      onPressed: () => Navigator.of(ctx).pop(false),
-                      child: const Text('Cancel',
-                          style: TextStyle(color: AppColors.greyText)),
-                    ),
-                    ElevatedButton(
-                      onPressed: () => Navigator.of(ctx).pop(true),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.red,
-                        foregroundColor: Colors.white,
-                        shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12)),
-                      ),
-                      child: const Text('Delete'),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: OutlinedButton(
+                            onPressed: () => Navigator.of(ctx).pop(false),
+                            style: OutlinedButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(vertical: 16),
+                              side: const BorderSide(color: AppColors.borderGrey),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                            child: const Text(
+                              'Cancel',
+                              style: TextStyle(
+                                color: AppColors.darkText,
+                                fontWeight: FontWeight.w600,
+                                fontSize: 16,
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: ElevatedButton(
+                            onPressed: () => Navigator.of(ctx).pop(true),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFFF35B5B),
+                              padding: const EdgeInsets.symmetric(vertical: 16),
+                              elevation: 0,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                            child: const Text(
+                              'Delete',
+                              style: TextStyle(
+                                color: AppColors.white,
+                                fontWeight: FontWeight.w600,
+                                fontSize: 16,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ],
                 ),
               );
               if (confirm == true) {
+                if (imageUrl.isNotEmpty) {
+                  await CloudinaryService.instance.deleteImageByUrl(imageUrl);
+                }
                 await _service.deleteCategory(id);
                 _loadProductCounts();
               }

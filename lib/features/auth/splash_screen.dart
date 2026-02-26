@@ -43,7 +43,11 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
     // Check if already logged in and route by role
     Future.delayed(const Duration(milliseconds: 1800), () async {
       if (!mounted) return;
-      final user = ref.read(authServiceProvider).currentUser;
+      // Await the first broadcast from the auth state stream to ensure
+      // Firebase has finished restoring any persisted session from disk.
+      final user = await ref.read(authServiceProvider).authStateChanges.first;
+      if (!mounted) return;
+      
       if (user != null) {
         final role = await ref.read(userRoleServiceProvider).getRole(user.uid);
         if (!mounted) return;
@@ -118,7 +122,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
                           ),
                           const SizedBox(height: 24),
                           const Text(
-                            'Z-Nectar',
+                            'Nectar',
                             style: TextStyle(
                               fontSize: 36,
                               fontWeight: FontWeight.bold,

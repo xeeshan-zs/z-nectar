@@ -317,39 +317,68 @@ class AccountScreen extends StatelessWidget {
             ),
           ),
         ),
+        actionsPadding: const EdgeInsets.fromLTRB(24, 24, 24, 24),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(),
-            child: const Text(
-              'Cancel',
-              style: TextStyle(color: AppColors.greyText),
-            ),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              final name = controller.text.trim();
-              if (name.isNotEmpty) {
-                await AuthService.instance.currentUser
-                    ?.updateDisplayName(name);
-                // Reload to pick up the change
-                await AuthService.instance.currentUser?.reload();
-              }
-              if (ctx.mounted) {
-                Navigator.of(ctx).pop();
-              }
-              // Force a rebuild of the parent to show the new name
-              if (context.mounted) {
-                (context as Element).markNeedsBuild();
-              }
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.primaryGreen,
-              foregroundColor: AppColors.white,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton(
+                  onPressed: () => Navigator.of(ctx).pop(),
+                  style: OutlinedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    side: const BorderSide(color: AppColors.borderGrey),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  child: const Text(
+                    'Cancel',
+                    style: TextStyle(
+                      color: AppColors.darkText,
+                      fontWeight: FontWeight.w600,
+                      fontSize: 16,
+                    ),
+                  ),
+                ),
               ),
-            ),
-            child: const Text('Save'),
+              const SizedBox(width: 12),
+              Expanded(
+                child: ElevatedButton(
+                  onPressed: () async {
+                    final name = controller.text.trim();
+                    if (name.isNotEmpty) {
+                      await AuthService.instance.currentUser
+                          ?.updateDisplayName(name);
+                      // Reload to pick up the change
+                      await AuthService.instance.currentUser?.reload();
+                    }
+                    if (ctx.mounted) {
+                      Navigator.of(ctx).pop();
+                    }
+                    // Force a rebuild of the parent to show the new name
+                    if (context.mounted) {
+                      (context as Element).markNeedsBuild();
+                    }
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primaryGreen,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  child: const Text(
+                    'Save',
+                    style: TextStyle(
+                      color: AppColors.white,
+                      fontWeight: FontWeight.w600,
+                      fontSize: 16,
+                    ),
+                  ),
+                ),
+              ),
+            ],
           ),
         ],
       ),
@@ -370,39 +399,69 @@ class AccountScreen extends StatelessWidget {
             color: AppColors.darkText,
           ),
         ),
+        contentPadding: const EdgeInsets.fromLTRB(24, 20, 24, 0),
         content: const Text(
           'Are you sure you want to log out?',
           style: TextStyle(
-            fontSize: 15,
+            fontSize: 16,
             color: AppColors.greyText,
           ),
         ),
+        actionsPadding: const EdgeInsets.fromLTRB(24, 24, 24, 24),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(),
-            child: const Text(
-              'Cancel',
-              style: TextStyle(color: AppColors.greyText),
-            ),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              await AuthService.instance.logout();
-              if (context.mounted) {
-                Navigator.of(context).pushAndRemoveUntil(
-                  MaterialPageRoute(builder: (_) => const SplashScreen()),
-                  (_) => false,
-                );
-              }
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.redAccent,
-              foregroundColor: AppColors.white,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton(
+                  onPressed: () => Navigator.of(ctx).pop(),
+                  style: OutlinedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    side: const BorderSide(color: AppColors.borderGrey),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  child: const Text(
+                    'Cancel',
+                    style: TextStyle(
+                      color: AppColors.darkText,
+                      fontWeight: FontWeight.w600,
+                      fontSize: 16,
+                    ),
+                  ),
+                ),
               ),
-            ),
-            child: const Text('Log Out'),
+              const SizedBox(width: 12),
+              Expanded(
+                child: ElevatedButton(
+                  onPressed: () async {
+                    await AuthService.instance.logout();
+                    if (context.mounted) {
+                      Navigator.of(context).pushAndRemoveUntil(
+                        MaterialPageRoute(builder: (_) => const SplashScreen()),
+                        (_) => false,
+                      );
+                    }
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFFF35B5B), // Soft Red
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  child: const Text(
+                    'Log Out',
+                    style: TextStyle(
+                      color: AppColors.white,
+                      fontWeight: FontWeight.w600,
+                      fontSize: 16,
+                    ),
+                  ),
+                ),
+              ),
+            ],
           ),
         ],
       ),

@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:grocery_app/core/theme/app_colors.dart';
-import 'package:grocery_app/core/widgets/green_button.dart';
 
 class OrderFailedDialog extends StatelessWidget {
   const OrderFailedDialog({super.key});
@@ -66,26 +65,54 @@ class OrderFailedDialog extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 25),
-            // Try Again Button
-            GreenButton(
-              text: 'Please Try Again',
-              onPressed: () => Navigator.pop(context),
-            ),
-            const SizedBox(height: 15),
-            // Back to home
-            GestureDetector(
-              onTap: () {
-                Navigator.pop(context);
-                Navigator.of(context).popUntil((route) => route.isFirst);
-              },
-              child: const Text(
-                'Back to home',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.darkText,
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: () {
+                      Navigator.pop(context);
+                      Navigator.of(context).popUntil((route) => route.isFirst);
+                    },
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      side: const BorderSide(color: AppColors.borderGrey),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    child: const Text(
+                      'Home',
+                      style: TextStyle(
+                        color: AppColors.darkText,
+                        fontWeight: FontWeight.w600,
+                        fontSize: 16,
+                      ),
+                    ),
+                  ),
                 ),
-              ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: () => Navigator.pop(context),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primaryGreen,
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    child: const Text(
+                      'Try Again',
+                      style: TextStyle(
+                        color: AppColors.white,
+                        fontWeight: FontWeight.w600,
+                        fontSize: 16,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ),
           ],
         ),

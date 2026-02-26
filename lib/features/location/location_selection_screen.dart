@@ -16,6 +16,18 @@ class LocationSelectionScreen extends StatefulWidget {
 
 class _LocationSelectionScreenState extends State<LocationSelectionScreen> {
   final _service = LocationService.instance;
+  late final Stream<QuerySnapshot> _locationsStream;
+
+  @override
+  void initState() {
+    super.initState();
+    _locationsStream = FirebaseFirestore.instance
+        .collection('users')
+        .doc(AuthService.instance.currentUser!.uid)
+        .collection('locations')
+        .orderBy('isSelected', descending: true)
+        .snapshots();
+  }
 
   Future<void> _openManualAddress() async {
     final address = await Navigator.of(context).push<String>(
@@ -54,12 +66,7 @@ class _LocationSelectionScreenState extends State<LocationSelectionScreen> {
         ),
       ),
       body: StreamBuilder<QuerySnapshot>(
-        stream: FirebaseFirestore.instance
-            .collection('users')
-            .doc(AuthService.instance.currentUser!.uid)
-            .collection('locations')
-            .orderBy('isSelected', descending: true)
-            .snapshots(),
+        stream: _locationsStream,
         builder: (context, snapshot) {
           if (snapshot.hasError) {
             return Center(child: Text('Error: ${snapshot.error}'));

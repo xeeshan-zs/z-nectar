@@ -162,7 +162,7 @@ class _AdminOverviewTabState extends State<AdminOverviewTab> {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    '\$${_revenue.toStringAsFixed(2)}',
+                    'Rs ${_revenue.toStringAsFixed(2)}',
                     style: const TextStyle(
                       fontSize: 32,
                       fontWeight: FontWeight.w800,
@@ -469,7 +469,7 @@ class _AdminOverviewTabState extends State<AdminOverviewTab> {
           ),
           // Total
           Text(
-            '\$${order.total.toStringAsFixed(2)}',
+            'Rs ${order.total.toStringAsFixed(2)}',
             style: const TextStyle(
               fontSize: 15,
               fontWeight: FontWeight.bold,

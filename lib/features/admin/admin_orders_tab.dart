@@ -197,7 +197,7 @@ class _AdminOrdersTabState extends State<AdminOrdersTab> {
             children: [
               // Items & total
               Text(
-                '${order.items.length} item(s) • \$${order.total.toStringAsFixed(2)}',
+                '${order.items.length} item(s) • Rs ${order.total.toStringAsFixed(2)}',
                 style: const TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.w600,
@@ -317,29 +317,62 @@ class _AdminOrdersTabState extends State<AdminOrdersTab> {
                       builder: (ctx) => AlertDialog(
                         shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(16)),
-                        title: const Text('Cancel Order'),
+                        title: const Text('Cancel Order',
+                            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: AppColors.darkText)),
+                        contentPadding: const EdgeInsets.fromLTRB(24, 20, 24, 0),
                         content: const Text(
-                            'Are you sure you want to cancel this order?'),
+                            'Are you sure you want to cancel this order?', style: TextStyle(fontSize: 16, color: AppColors.greyText)),
+                        actionsPadding: const EdgeInsets.fromLTRB(24, 24, 24, 24),
                         actions: [
-                          TextButton(
-                            onPressed: () => Navigator.of(ctx).pop(),
-                            child: const Text('No',
-                                style:
-                                    TextStyle(color: AppColors.greyText)),
-                          ),
-                          TextButton(
-                            onPressed: () {
-                              OrderService.instance
-                                  .cancelOrder(order.id);
-                              Navigator.of(ctx).pop();
-                            },
-                            style: TextButton.styleFrom(
-                                backgroundColor: Colors.red,
-                                foregroundColor: Colors.white,
-                                shape: RoundedRectangleBorder(
-                                    borderRadius:
-                                        BorderRadius.circular(12))),
-                            child: const Text('Cancel Order'),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: OutlinedButton(
+                                  onPressed: () => Navigator.of(ctx).pop(),
+                                  style: OutlinedButton.styleFrom(
+                                    padding: const EdgeInsets.symmetric(vertical: 16),
+                                    side: const BorderSide(color: AppColors.borderGrey),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                  ),
+                                  child: const Text(
+                                    'No',
+                                    style: TextStyle(
+                                      color: AppColors.darkText,
+                                      fontWeight: FontWeight.w600,
+                                      fontSize: 16,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: ElevatedButton(
+                                  onPressed: () {
+                                    OrderService.instance
+                                        .cancelOrder(order.id);
+                                    Navigator.of(ctx).pop();
+                                  },
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: const Color(0xFFF35B5B),
+                                    padding: const EdgeInsets.symmetric(vertical: 16),
+                                    elevation: 0,
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                  ),
+                                  child: const Text(
+                                    'Cancel Order',
+                                    style: TextStyle(
+                                      color: AppColors.white,
+                                      fontWeight: FontWeight.w600,
+                                      fontSize: 14,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
                         ],
                       ),
@@ -490,7 +523,7 @@ class _AdminOrdersTabState extends State<AdminOrdersTab> {
                           ),
                         ),
                         Text(
-                          '\$${(item.price * item.qty).toStringAsFixed(2)}',
+                          'Rs ${(item.price * item.qty).toStringAsFixed(2)}',
                           style: const TextStyle(
                               fontWeight: FontWeight.bold, fontSize: 14),
                         ),
@@ -504,7 +537,7 @@ class _AdminOrdersTabState extends State<AdminOrdersTab> {
                   const Text('Total',
                       style: TextStyle(
                           fontSize: 18, fontWeight: FontWeight.bold)),
-                  Text('\$${order.total.toStringAsFixed(2)}',
+                  Text('Rs ${order.total.toStringAsFixed(2)}',
                       style: const TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.bold,

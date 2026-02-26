@@ -56,6 +56,15 @@ class CartService {
     await _cartCol(userId).doc(productId).delete();
   }
 
+  /// Safely remove multiple items from the cart via batch
+  Future<void> removeItemsFromCartBatch(String userId, List<String> productIds) async {
+    final batch = _firestore.batch();
+    for (final productId in productIds) {
+      batch.delete(_cartCol(userId).doc(productId));
+    }
+    await batch.commit();
+  }
+
   /// Clear the entire cart
   Future<void> clearCart(String userId) async {
     final snap = await _cartCol(userId).get();

@@ -8,12 +8,14 @@ import 'package:firebase_analytics/firebase_analytics.dart';
 import 'firebase_options.dart';
 import 'core/theme/app_theme.dart';
 import 'features/auth/splash_screen.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
+  await dotenv.load(fileName: ".env");
 
   if (kIsWeb) {
     try {
@@ -37,11 +39,11 @@ void main() async {
     };
   }
 
-  runApp(const ProviderScope(child: ZNectarApp()));
+  runApp(const ProviderScope(child: NectarApp()));
 }
 
-class ZNectarApp extends StatelessWidget {
-  const ZNectarApp({super.key});
+class NectarApp extends StatelessWidget {
+  const NectarApp({super.key});
 
   static FirebaseAnalytics analytics = FirebaseAnalytics.instance;
   static FirebaseAnalyticsObserver observer = FirebaseAnalyticsObserver(analytics: analytics);
@@ -49,7 +51,7 @@ class ZNectarApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Z-Nectar',
+      title: 'Nectar',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme,
       navigatorObservers: <NavigatorObserver>[observer],

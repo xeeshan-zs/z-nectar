@@ -7,13 +7,34 @@ import 'package:grocery_app/core/widgets/green_button.dart';
 import 'package:grocery_app/core/services/cart_service.dart';
 import 'package:grocery_app/features/cart/checkout_bottom_sheet.dart';
 
-class CartScreen extends StatelessWidget {
+class CartScreen extends StatefulWidget {
   const CartScreen({super.key});
 
   @override
+  State<CartScreen> createState() => _CartScreenState();
+}
+
+class _CartScreenState extends State<CartScreen> {
+  // We keep track of items the user has EXPLICITLY unselected.
+  // By default, assuming all new items are selected.
+  final Set<String> _unselectedItemIds = {};
+  late Stream<List<CartItem>> _cartStream;
+  User? _currentUser;
+
+  @override
+  void initState() {
+    super.initState();
+    _currentUser = FirebaseAuth.instance.currentUser;
+    if (_currentUser != null) {
+      _cartStream = CartService.instance.getCartItems(_currentUser!.uid);
+    } else {
+      _cartStream = const Stream.empty();
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final user = FirebaseAuth.instance.currentUser;
-    if (user == null) {
+    if (_currentUser == null) {
       return const Center(
         child: Text('Please log in to view your cart',
             style: TextStyle(fontSize: 16, color: AppColors.greyText)),
@@ -22,7 +43,7 @@ class CartScreen extends StatelessWidget {
 
     return SafeArea(
       child: StreamBuilder<List<CartItem>>(
-        stream: CartService.instance.getCartItems(user.uid),
+        stream: _cartStream,
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(
@@ -55,67 +76,144 @@ class CartScreen extends StatelessWidget {
             );
           }
 
-          final totalCost =
-              items.fold<double>(0, (sum, item) => sum + item.totalPrice);
+          // Filter out the unselected items to calculate total and prep for checkout
+          final selectedItems = items
+              .where((item) => !_unselectedItemIds.contains(item.id))
+              .toList();
+
+          final totalCost = selectedItems.fold<double>(
+              0, (sum, item) => sum + item.totalPrice);
+              
+          final isAllSelected = items.every((item) => !_unselectedItemIds.contains(item.id));
 
           return Column(
             children: [
               const SizedBox(height: 20),
-              const Text(
-                'My Cart',
-                style: TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.darkText),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: AppConstants.horizontalPadding),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text(
+                      'My Cart',
+                      style: TextStyle(
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.darkText),
+                    ),
+                    if (items.isNotEmpty)
+                      TextButton(
+                        onPressed: () {
+                          setState(() {
+                            if (isAllSelected) {
+                              // Unselect all
+                              _unselectedItemIds.addAll(items.map((e) => e.id));
+                            } else {
+                              // Select all
+                              _unselectedItemIds.clear();
+                            }
+                          });
+                        },
+                        child: Text(
+                          isAllSelected ? 'Deselect All' : 'Select All',
+                          style: const TextStyle(
+                            color: AppColors.primaryGreen,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
               ),
               const SizedBox(height: 10),
-              const Divider(),
+              const Divider(height: 1),
               Expanded(
                 child: ListView.separated(
                   padding: const EdgeInsets.symmetric(vertical: 10),
                   itemCount: items.length,
-                  separatorBuilder: (_, __) => const Divider(),
+                  separatorBuilder: (_, __) => const Divider(height: 1),
                   itemBuilder: (context, index) {
-                    return _buildCartItemTile(context, items[index], user.uid);
+                    return _buildCartItemTile(context, items[index], _currentUser!.uid);
                   },
                 ),
               ),
-              // Checkout Button
-              Padding(
+              // Checkout Section
+              Container(
                 padding: const EdgeInsets.fromLTRB(
                     AppConstants.horizontalPadding,
-                    10,
+                    15,
                     AppConstants.horizontalPadding,
-                    20),
-                child: GreenButton(
-                  text: 'Go to Checkout',
-                  trailing: Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 5, vertical: 2),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF489E67),
-                      borderRadius: BorderRadius.circular(5),
-                    ),
-                    child: Text(
-                      '\$${totalCost.toStringAsFixed(2)}',
-                      style: const TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                        color: AppColors.white,
-                      ),
-                    ),
-                  ),
-                  onPressed: () {
-                    showModalBottomSheet(
-                      context: context,
-                      isScrollControlled: true,
-                      backgroundColor: Colors.transparent,
-                      builder: (_) => CheckoutBottomSheet(
-                        totalCost: totalCost,
-                        cartItems: items,
-                      ),
-                    );
-                  },
+                    25),
+                decoration: BoxDecoration(
+                  color: AppColors.white,
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.05),
+                      offset: const Offset(0, -4),
+                      blurRadius: 10,
+                    )
+                  ],
+                ),
+                child: SafeArea(
+                  top: false,
+                  child: selectedItems.isEmpty
+                      ? GreenButton(
+                          text: 'Select items to checkout',
+                          onPressed: () {},
+                          // Make it look disabled by adjusting button colors if needed,
+                          // but since GreenButton might not support it out of the box,
+                          // we just use a slightly faded opacity or let the user try and see it does nothing.
+                        )
+                      : InkWell(
+                          onTap: () {
+                            showModalBottomSheet(
+                              context: context,
+                              isScrollControlled: true,
+                              backgroundColor: Colors.transparent,
+                              builder: (_) => CheckoutBottomSheet(
+                                totalCost: totalCost,
+                                cartItems: selectedItems,
+                              ),
+                            );
+                          },
+                          child: Container(
+                            height: 60,
+                            decoration: BoxDecoration(
+                              color: AppColors.primaryGreen,
+                              borderRadius: BorderRadius.circular(15),
+                            ),
+                            padding: const EdgeInsets.symmetric(horizontal: 20),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                const Text(
+                                  'Go to Checkout',
+                                  style: TextStyle(
+                                    color: AppColors.white,
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 8, vertical: 4),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white.withValues(alpha: 0.2),
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: Text(
+                                    'Rs ${totalCost.toStringAsFixed(2)}',
+                                    style: const TextStyle(
+                                      color: AppColors.white,
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
                 ),
               ),
             ],
@@ -125,12 +223,46 @@ class CartScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildCartItemTile(BuildContext context, CartItem item, String userId) {
+  Widget _buildCartItemTile(
+      BuildContext context, CartItem item, String userId) {
+    final isSelected = !_unselectedItemIds.contains(item.id);
+
     return Padding(
       padding: const EdgeInsets.symmetric(
-          horizontal: AppConstants.horizontalPadding, vertical: 10),
+          horizontal: AppConstants.horizontalPadding, vertical: 12),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
+          // Checkbox for selection
+          GestureDetector(
+            onTap: () {
+              setState(() {
+                if (isSelected) {
+                  _unselectedItemIds.add(item.id);
+                } else {
+                  _unselectedItemIds.remove(item.id);
+                }
+              });
+            },
+            child: Container(
+              margin: const EdgeInsets.only(right: 12),
+              width: 24,
+              height: 24,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(6),
+                border: Border.all(
+                  color: isSelected
+                      ? AppColors.primaryGreen
+                      : AppColors.greyText.withValues(alpha: 0.5),
+                  width: 2,
+                ),
+                color: isSelected ? AppColors.primaryGreen : Colors.transparent,
+              ),
+              child: isSelected
+                  ? const Icon(Icons.check, size: 16, color: Colors.white)
+                  : null,
+            ),
+          ),
           // Product Image
           CachedNetworkImage(
             imageUrl: item.imageUrl,
@@ -150,7 +282,7 @@ class CartScreen extends StatelessWidget {
                   color: AppColors.greyText, size: 28),
             ),
           ),
-          const SizedBox(width: 20),
+          const SizedBox(width: 15),
           // Details & Controls
           Expanded(
             child: Column(
@@ -230,7 +362,7 @@ class CartScreen extends StatelessWidget {
                     ),
                     // Price
                     Text(
-                      '\$${item.totalPrice.toStringAsFixed(2)}',
+                      'Rs ${item.totalPrice.toStringAsFixed(2)}',
                       style: const TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.bold,

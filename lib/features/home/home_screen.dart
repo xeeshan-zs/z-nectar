@@ -21,6 +21,24 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   int _bannerIndex = 0;
+  
+  late final Stream<LocationModel?> _locationStream;
+  late final Stream<List<BannerModel>> _bannersStream;
+  late final Stream<List<ProductModel>> _carouselProductsStream;
+  late final Stream<List<ProductModel>> _featuredProductsStream;
+  late final Stream<List<ProductModel>> _exclusiveProductsStream;
+  late final Stream<List<ProductModel>> _bestSellingProductsStream;
+
+  @override
+  void initState() {
+    super.initState();
+    _locationStream = LocationService.instance.getCurrentLocation();
+    _bannersStream = BannerService.instance.getBanners();
+    _carouselProductsStream = ProductService.instance.getCarouselProducts();
+    _featuredProductsStream = ProductService.instance.getFeaturedProducts();
+    _exclusiveProductsStream = ProductService.instance.getExclusiveProducts();
+    _bestSellingProductsStream = ProductService.instance.getBestSellingProducts();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -56,7 +74,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 );
               },
               child: StreamBuilder<LocationModel?>(
-                stream: LocationService.instance.getCurrentLocation(),
+                stream: _locationStream,
                 builder: (context, snapshot) {
                   final location = snapshot.data?.address ?? 'Select Location';
                   return Row(
@@ -121,7 +139,7 @@ class _HomeScreenState extends State<HomeScreen> {
             _buildSectionHeader('Featured Products'),
             const SizedBox(height: 16),
             StreamBuilder<List<ProductModel>>(
-              stream: ProductService.instance.getFeaturedProducts(),
+              stream: _featuredProductsStream,
               builder: (context, snapshot) {
                 if (!snapshot.hasData || snapshot.data!.isEmpty) {
                   return const SizedBox(
@@ -154,7 +172,7 @@ class _HomeScreenState extends State<HomeScreen> {
             _buildSectionHeader('Exclusive Offer'),
             const SizedBox(height: 16),
             StreamBuilder<List<ProductModel>>(
-              stream: ProductService.instance.getExclusiveProducts(),
+              stream: _exclusiveProductsStream,
               builder: (context, snapshot) {
                 if (!snapshot.hasData || snapshot.data!.isEmpty) {
                   return const SizedBox(
@@ -187,7 +205,7 @@ class _HomeScreenState extends State<HomeScreen> {
             _buildSectionHeader('Best Selling'),
             const SizedBox(height: 16),
             StreamBuilder<List<ProductModel>>(
-              stream: ProductService.instance.getBestSellingProducts(),
+              stream: _bestSellingProductsStream,
               builder: (context, snapshot) {
                 if (!snapshot.hasData || snapshot.data!.isEmpty) {
                   return const SizedBox(
@@ -224,7 +242,7 @@ class _HomeScreenState extends State<HomeScreen> {
   // ── Banner Carousel from Firestore ────────────────────────────────────
   Widget _buildBannerCarousel() {
     return StreamBuilder<List<BannerModel>>(
-      stream: BannerService.instance.getBanners(),
+      stream: _bannersStream,
       builder: (context, snapshot) {
         if (!snapshot.hasData || snapshot.data!.isEmpty) {
           // Fallback: show static banners if none in DB
@@ -326,7 +344,7 @@ class _HomeScreenState extends State<HomeScreen> {
   // ── Product Carousel (Carousel-flagged products) ──────────────────────
   Widget _buildProductCarousel() {
     return StreamBuilder<List<ProductModel>>(
-      stream: ProductService.instance.getCarouselProducts(),
+      stream: _carouselProductsStream,
       builder: (context, snapshot) {
         if (!snapshot.hasData || snapshot.data!.isEmpty) {
           return const SizedBox.shrink();
@@ -425,7 +443,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                   ),
                                   const SizedBox(height: 12),
                                   Text(
-                                    '\$${product.price.toStringAsFixed(2)}',
+                                    'Rs ${product.price.toStringAsFixed(2)}',
                                     style: const TextStyle(
                                       fontSize: 20,
                                       fontWeight: FontWeight.bold,

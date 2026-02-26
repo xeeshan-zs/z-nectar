@@ -249,7 +249,7 @@ class _AdminProductsTabState extends State<AdminProductsTab> {
                 ),
                 const SizedBox(height: 3),
                 Text(
-                  '\$${product.price.toStringAsFixed(2)} • ${product.unit}',
+                  'Rs ${product.price.toStringAsFixed(2)} • ${product.unit}',
                   style: const TextStyle(
                       fontSize: 13, color: AppColors.greyText),
                 ),
@@ -377,27 +377,60 @@ class _AdminProductsTabState extends State<AdminProductsTab> {
       builder: (ctx) => AlertDialog(
         shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16)),
-        title: const Text('Delete Product'),
-        content:
-            Text('Delete "${product.name}"? This cannot be undone.'),
+        title: const Text('Delete Product',
+            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: AppColors.darkText)),
+        contentPadding: const EdgeInsets.fromLTRB(24, 20, 24, 0),
+        content: Text('Delete "${product.name}"? This cannot be undone.', style: const TextStyle(fontSize: 16, color: AppColors.greyText)),
+        actionsPadding: const EdgeInsets.fromLTRB(24, 24, 24, 24),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(false),
-            child: const Text('Cancel',
-                style: TextStyle(color: AppColors.greyText)),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              ProductService.instance.deleteProduct(product.id);
-              Navigator.of(ctx).pop(true);
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red,
-              foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12)),
-            ),
-            child: const Text('Delete'),
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton(
+                  onPressed: () => Navigator.of(ctx).pop(false),
+                  style: OutlinedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    side: const BorderSide(color: AppColors.borderGrey),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  child: const Text(
+                    'Cancel',
+                    style: TextStyle(
+                      color: AppColors.darkText,
+                      fontWeight: FontWeight.w600,
+                      fontSize: 16,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: ElevatedButton(
+                  onPressed: () {
+                    ProductService.instance.deleteProduct(product.id);
+                    Navigator.of(ctx).pop(true);
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFFF35B5B),
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  child: const Text(
+                    'Delete',
+                    style: TextStyle(
+                      color: AppColors.white,
+                      fontWeight: FontWeight.w600,
+                      fontSize: 16,
+                    ),
+                  ),
+                ),
+              ),
+            ],
           ),
         ],
       ),

@@ -1,5 +1,5 @@
 name: grocery_app
-description: "Z-Nectar - Online Grocery Store"
+description: "Nectar - Online Grocery Store"
 publish_to: 'none'
 
 version: 1.0.0+1
@@ -22,6 +22,10 @@ dependencies:
   intl: ^0.20.2
   firebase_crashlytics: ^4.3.10
   firebase_analytics: ^11.6.0
+  flutter_colorpicker: ^1.1.0
+  image_picker: ^1.2.1
+  http: ^1.6.0
+  flutter_dotenv: ^5.1.0
 
 dev_dependencies:
   flutter_test:
@@ -46,3 +50,4 @@ flutter:
   assets:
     - assets/images/
     - assets/icons/
+    - .env

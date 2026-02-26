@@ -2,40 +2,71 @@ import 'package:flutter/material.dart';
 import 'package:grocery_app/core/theme/app_colors.dart';
 import 'package:grocery_app/core/constants/app_constants.dart';
 import 'package:grocery_app/core/utils/snackbar_service.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:grocery_app/core/services/providers.dart';
+import 'package:grocery_app/data/models/promo_model.dart';
+import 'package:intl/intl.dart';
 
-class PromoCodeScreen extends StatefulWidget {
-  const PromoCodeScreen({super.key});
+class PromoCodeScreen extends ConsumerStatefulWidget {
+  final bool isSelectionMode;
+  const PromoCodeScreen({super.key, this.isSelectionMode = false});
 
   @override
-  State<PromoCodeScreen> createState() => _PromoCodeScreenState();
+  ConsumerState<PromoCodeScreen> createState() => _PromoCodeScreenState();
 }
 
-class _PromoCodeScreenState extends State<PromoCodeScreen> {
+class _PromoCodeScreenState extends ConsumerState<PromoCodeScreen> {
   final _codeCtrl = TextEditingController();
+  late Future<List<PromoModel>> _promosFuture;
 
-  final List<Map<String, dynamic>> _vouchers = [
-    {
-      'code': 'FIRST50',
-      'title': '50% Off First Order',
-      'description': 'Valid for new users only. Max discount \$20.',
-      'expiry': 'Valid until 31 Dec',
-      'color': const Color(0xFFFFE0B2), // Orange light
-      'iconColor': Colors.orange,
-    },
-    {
-      'code': 'FREEDEL',
-      'title': 'Free Delivery',
-      'description': 'Applicable on orders above \$50.',
-      'expiry': 'Valid until 15 Nov',
-      'color': const Color(0xFFC8E6C9), // Green light
-      'iconColor': AppColors.primaryGreen,
-    },
-  ];
+  @override
+  void initState() {
+    super.initState();
+    _loadPromos();
+  }
+
+  void _loadPromos() {
+    final user = ref.read(authServiceProvider).currentUser;
+    if (user != null) {
+      _promosFuture = ref.read(promoServiceProvider).getAvailablePromos(user.uid);
+    } else {
+      _promosFuture = Future.value([]);
+    }
+  }
 
   @override
   void dispose() {
     _codeCtrl.dispose();
     super.dispose();
+  }
+
+  Future<void> _applyCode(String code) async {
+    if (code.isEmpty) return;
+    final user = ref.read(authServiceProvider).currentUser;
+    if (user == null) return;
+
+    // Show loading
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => const Center(child: CircularProgressIndicator(color: AppColors.primaryGreen))
+    );
+
+    final validPromo = await ref.read(promoServiceProvider).validateCode(user.uid, code);
+    if (!mounted) return;
+
+    Navigator.pop(context); // close dialog
+
+    if (validPromo != null) {
+      if (widget.isSelectionMode) {
+        Navigator.pop(context, validPromo); // Return the promo model specifically here
+      } else {
+        SnackbarService.showSuccess(context, 'Promo code ${validPromo.code} is valid!');
+        _codeCtrl.clear();
+      }
+    } else {
+      SnackbarService.showError(context, 'Invalid, expired, or already used promo code');
+    }
   }
 
   @override
@@ -59,7 +90,7 @@ class _PromoCodeScreenState extends State<PromoCodeScreen> {
           ),
         ),
       ),
-      body: SingleChildScrollView(
+      body: Padding(
         padding: const EdgeInsets.all(AppConstants.horizontalPadding),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -95,27 +126,21 @@ class _PromoCodeScreenState extends State<PromoCodeScreen> {
                   ),
                 ),
                 const SizedBox(width: 15),
-                SizedBox(
-                  height: 52,
-                  child: ElevatedButton(
-                    onPressed: () {
-                      if (_codeCtrl.text.isNotEmpty) {
-                        SnackbarService.showInfo(context, 'Applying code: ${_codeCtrl.text} (Coming soon)');
-                      }
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.primaryGreen,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(15),
-                      ),
-                      elevation: 0,
+                ElevatedButton(
+                  onPressed: () => _applyCode(_codeCtrl.text.trim()),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primaryGreen,
+                    minimumSize: const Size(80, 56),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(15),
                     ),
-                    child: const Text('Apply',
-                        style: TextStyle(
-                            color: AppColors.white,
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold)),
+                    elevation: 0,
                   ),
+                  child: const Text('Apply',
+                      style: TextStyle(
+                          color: AppColors.white,
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold)),
                 ),
               ],
             ),
@@ -129,14 +154,40 @@ class _PromoCodeScreenState extends State<PromoCodeScreen> {
               ),
             ),
             const SizedBox(height: 15),
-            ListView.separated(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              itemCount: _vouchers.length,
-              separatorBuilder: (_, __) => const SizedBox(height: 15),
-              itemBuilder: (context, index) {
-                return _buildVoucherCard(_vouchers[index]);
-              },
+            Expanded(
+              child: FutureBuilder<List<PromoModel>>(
+                future: _promosFuture,
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const Center(child: Padding(
+                      padding: EdgeInsets.all(40),
+                      child: CircularProgressIndicator(color: AppColors.primaryGreen),
+                    ));
+                  }
+                  if (snapshot.hasError) {
+                    return Center(child: Text('Error loading promos:\n${snapshot.error}'));
+                  }
+
+                  final promos = snapshot.data ?? [];
+
+                  if (promos.isEmpty) {
+                    return const Center(
+                      child: Padding(
+                        padding: EdgeInsets.all(20.0),
+                        child: Text('No active vouchers found.', style: TextStyle(color: AppColors.greyText)),
+                      ),
+                    );
+                  }
+
+                  return ListView.separated(
+                    itemCount: promos.length,
+                    separatorBuilder: (_, __) => const SizedBox(height: 15),
+                    itemBuilder: (context, index) {
+                      return _buildVoucherCard(promos[index]);
+                    },
+                  );
+                }
+              ),
             ),
           ],
         ),
@@ -144,10 +195,14 @@ class _PromoCodeScreenState extends State<PromoCodeScreen> {
     );
   }
 
-  Widget _buildVoucherCard(Map<String, dynamic> voucher) {
+  Widget _buildVoucherCard(PromoModel promo) {
+    // Dynamic color based on percent
+    final color = promo.discountPercent > 10 ? const Color(0xFFFFE0B2) : const Color(0xFFC8E6C9);
+    final iconColor = promo.discountPercent > 10 ? Colors.orange : AppColors.primaryGreen;
+
     return Container(
       decoration: BoxDecoration(
-        color: voucher['color'],
+        color: color,
         borderRadius: BorderRadius.circular(16),
       ),
       child: Row(
@@ -162,7 +217,7 @@ class _PromoCodeScreenState extends State<PromoCodeScreen> {
               ),
             ),
             child: Icon(Icons.confirmation_num,
-                color: voucher['iconColor'], size: 40),
+                color: iconColor, size: 40),
           ),
           Expanded(
             child: Padding(
@@ -171,7 +226,7 @@ class _PromoCodeScreenState extends State<PromoCodeScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    voucher['title'],
+                    promo.title,
                     style: const TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
@@ -180,7 +235,7 @@ class _PromoCodeScreenState extends State<PromoCodeScreen> {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    voucher['description'],
+                    promo.description,
                     style: TextStyle(
                       fontSize: 13,
                       color: AppColors.darkText.withValues(alpha: 0.7),
@@ -191,23 +246,33 @@ class _PromoCodeScreenState extends State<PromoCodeScreen> {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(
-                        voucher['expiry'],
+                        // No expiryDate on standard PromoModel right this second, handling if we add it
+                        "No Expiry", 
                         style: TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.w600,
-                          color: voucher['iconColor'],
+                          color: iconColor,
                         ),
                       ),
                       GestureDetector(
                         onTap: () {
-                          _codeCtrl.text = voucher['code'];
+                          _codeCtrl.text = promo.code;
+                          if (widget.isSelectionMode) {
+                            // Don't call _applyCode here because the USE CODE button 
+                            // already signifies a valid promo from the list anyway. We 
+                            // can just return it immediately.
+                            Navigator.pop(context, promo);
+                          } else {
+                            // Just check it for user confirmation
+                            _applyCode(promo.code);
+                          }
                         },
                         child: Text(
                           'USE CODE',
                           style: TextStyle(
                             fontSize: 14,
                             fontWeight: FontWeight.bold,
-                            color: voucher['iconColor'],
+                            color: iconColor,
                             letterSpacing: 1.2,
                           ),
                         ),

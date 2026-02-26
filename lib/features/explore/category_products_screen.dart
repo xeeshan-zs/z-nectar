@@ -6,10 +6,23 @@ import 'package:grocery_app/core/widgets/product_card.dart';
 import 'package:grocery_app/data/models/category_model.dart';
 import 'package:grocery_app/data/models/product_model.dart';
 
-class CategoryProductsScreen extends StatelessWidget {
+class CategoryProductsScreen extends StatefulWidget {
   final CategoryModel category;
 
   const CategoryProductsScreen({super.key, required this.category});
+
+  @override
+  State<CategoryProductsScreen> createState() => _CategoryProductsScreenState();
+}
+
+class _CategoryProductsScreenState extends State<CategoryProductsScreen> {
+  late final Stream<List<ProductModel>> _productsStream;
+
+  @override
+  void initState() {
+    super.initState();
+    _productsStream = ProductService.instance.getByCategory(widget.category.id);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -23,7 +36,7 @@ class CategoryProductsScreen extends StatelessWidget {
           onPressed: () => Navigator.pop(context),
         ),
         title: Text(
-          category.name.replaceAll('\n', ' '),
+          widget.category.name.replaceAll('\n', ' '),
           style: const TextStyle(
             fontSize: 20,
             fontWeight: FontWeight.bold,
@@ -39,7 +52,7 @@ class CategoryProductsScreen extends StatelessWidget {
         ],
       ),
       body: StreamBuilder<List<ProductModel>>(
-        stream: ProductService.instance.getByCategory(category.id),
+        stream: _productsStream,
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(

@@ -4,7 +4,7 @@ import 'package:grocery_app/main.dart';
 
 void main() {
   testWidgets('App launches successfully', (WidgetTester tester) async {
-    await tester.pumpWidget(const ZNectarApp());
+    await tester.pumpWidget(const NectarApp());
     expect(find.byType(MaterialApp), findsOneWidget);
   });
 }

@@ -9,6 +9,11 @@ import 'package:grocery_app/data/models/order_model.dart';
 import 'package:grocery_app/features/order/order_success_screen.dart';
 import 'package:grocery_app/features/order/order_failed_dialog.dart';
 import 'package:grocery_app/core/services/location_service.dart';
+import 'package:grocery_app/features/account/promo_code_screen.dart';
+import 'package:grocery_app/features/location/location_selection_screen.dart';
+import 'package:grocery_app/data/models/location_model.dart';
+import 'package:grocery_app/data/models/promo_model.dart';
+import 'package:grocery_app/core/services/promo_service.dart';
 
 class CheckoutBottomSheet extends StatefulWidget {
   final double totalCost;
@@ -28,6 +33,14 @@ class _CheckoutBottomSheetState extends State<CheckoutBottomSheet> {
   String _deliveryMethod = 'Delivery';
   String _paymentMethod = 'cod';
   bool _isPlacingOrder = false;
+  PromoModel? _appliedPromo;
+  late Stream<LocationModel?> _locationStream;
+
+  @override
+  void initState() {
+    super.initState();
+    _locationStream = LocationService.instance.getCurrentLocation();
+  }
 
   final List<String> _deliveryOptions = ['Delivery', 'Pickup'];
   final Map<String, String> _paymentOptions = {
@@ -36,6 +49,13 @@ class _CheckoutBottomSheetState extends State<CheckoutBottomSheet> {
     'jazzcash': 'JazzCash',
     'easypaisa': 'EasyPaisa',
   };
+
+  double get _finalCost {
+    if (_appliedPromo != null) {
+      return widget.totalCost * (1 - (_appliedPromo!.discountPercent / 100));
+    }
+    return widget.totalCost;
+  }
 
   Future<void> _placeOrder() async {
     final user = FirebaseAuth.instance.currentUser;
@@ -56,13 +76,20 @@ class _CheckoutBottomSheetState extends State<CheckoutBottomSheet> {
                   price: c.price,
                 ))
             .toList(),
-        total: widget.totalCost,
+        total: _finalCost,
         paymentMethod: _paymentMethod,
         address: _deliveryMethod == 'Pickup' ? 'Store Pickup' : await _getSelectedAddress(),
       );
 
       await OrderService.instance.placeOrder(order);
-      await CartService.instance.clearCart(user.uid);
+      
+      // Remove only the purchased items from the cart safely using a batch
+      final productIds = widget.cartItems.map((e) => e.productId).toList();
+      await CartService.instance.removeItemsFromCartBatch(user.uid, productIds);
+      
+      if (_appliedPromo != null) {
+        await PromoService.instance.markPromoUsed(user.uid, _appliedPromo!);
+      }
 
       if (!mounted) return;
       Navigator.pop(context); // close bottom sheet
@@ -139,6 +166,29 @@ class _CheckoutBottomSheetState extends State<CheckoutBottomSheet> {
               onTap: () => _showDeliveryPicker(),
             ),
             const Divider(),
+            
+            // Address Row (Show only if Delivery)
+            if (_deliveryMethod == 'Delivery') ...[
+              StreamBuilder<LocationModel?>(
+                stream: _locationStream,
+                builder: (context, snapshot) {
+                  final loc = snapshot.data;
+                  final addressText = loc != null ? loc.address : 'Select Address';
+                  return _buildCheckoutRow(
+                    'Address',
+                    addressText,
+                    trailing: const Icon(Icons.chevron_right, color: AppColors.darkText, size: 22),
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => const LocationSelectionScreen()),
+                      );
+                    },
+                  );
+                },
+              ),
+              const Divider(),
+            ],
 
             // Payment method
             _buildCheckoutRow(
@@ -165,10 +215,35 @@ class _CheckoutBottomSheetState extends State<CheckoutBottomSheet> {
             ),
             const Divider(),
 
+            const Divider(),
+
+            // Promo Code
+            _buildCheckoutRow(
+              'Promo Code',
+              _appliedPromo != null ? _appliedPromo!.code : 'Apply Promo',
+              trailing: const Icon(Icons.chevron_right,
+                  color: AppColors.darkText, size: 22),
+              onTap: () async {
+                final promo = await Navigator.push<PromoModel?>(
+                  context,
+                  MaterialPageRoute(builder: (_) => const PromoCodeScreen(isSelectionMode: true)),
+                );
+                if (promo != null) {
+                  setState(() => _appliedPromo = promo);
+                }
+              },
+            ),
+            const Divider(),
+
             // Total Cost
+            if (_appliedPromo != null)
+              _buildCheckoutRow(
+                'Discount',
+                '-${_appliedPromo!.discountPercent.toInt()}%',
+              ),
             _buildCheckoutRow(
               'Total Cost',
-              '\$${widget.totalCost.toStringAsFixed(2)}',
+              'Rs ${_finalCost.toStringAsFixed(2)}',
             ),
             const Divider(),
 
@@ -278,6 +353,18 @@ class _CheckoutBottomSheetState extends State<CheckoutBottomSheet> {
                   ? const Icon(Icons.check, color: AppColors.primaryGreen)
                   : null,
               onTap: () {
+                if (entry.key != 'cod') {
+                  Navigator.pop(context);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('${entry.value} coming soon!'),
+                      backgroundColor: AppColors.primaryGreen,
+                      behavior: SnackBarBehavior.floating,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    ),
+                  );
+                  return;
+                }
                 setState(() => _paymentMethod = entry.key);
                 Navigator.pop(context);
               },

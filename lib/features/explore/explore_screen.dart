@@ -19,6 +19,15 @@ class ExploreScreen extends StatefulWidget {
 
 class _ExploreScreenState extends State<ExploreScreen> {
   String _searchQuery = '';
+  late final Stream<List<ProductModel>> _productsStream;
+  late final Stream<QuerySnapshot> _categoriesStream;
+
+  @override
+  void initState() {
+    super.initState();
+    _productsStream = ProductService.instance.getProducts();
+    _categoriesStream = CategoryService.instance.getCategories();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -76,7 +85,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
   /// Search results — queries products from Firestore by name
   Widget _buildSearchResults() {
     return StreamBuilder<List<ProductModel>>(
-      stream: ProductService.instance.getProducts(),
+      stream: _productsStream,
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Center(
@@ -130,7 +139,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
   /// Category grid — from Firestore
   Widget _buildCategoryGrid() {
     return StreamBuilder<QuerySnapshot>(
-      stream: CategoryService.instance.getCategories(),
+      stream: _categoriesStream,
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Center(
@@ -177,10 +186,45 @@ class _ExploreScreenState extends State<ExploreScreen> {
     );
   }
 
-  Color _parseColor(String hex) {
-    hex = hex.replaceAll('#', '');
-    if (hex.length == 6) hex = 'FF$hex';
-    return Color(int.parse(hex, radix: 16));
+  Color _parseColor(String colorStr) {
+    try {
+      final str = colorStr.trim().toLowerCase();
+      
+      // Handle RGB formatting: rgb(238, 247, 241) or 238, 247, 241
+      if (str.contains(',')) {
+        final content = str.replaceAll('rgb(', '').replaceAll(')', '').replaceAll('rgba(', '');
+        final parts = content.split(',').map((e) => e.trim()).toList();
+        if (parts.length >= 3) {
+          return Color.fromRGBO(
+            int.parse(parts[0]), 
+            int.parse(parts[1]), 
+            int.parse(parts[2]), 
+            parts.length == 4 ? double.parse(parts[3]) : 1.0
+          );
+        }
+      }
+      
+      // Handle HSL formatting: hsl(140, 36%, 95%)
+      if (str.startsWith('hsl(') && str.endsWith(')')) {
+        final content = str.substring(4, str.length - 1);
+        final parts = content.split(',').map((e) => e.trim()).toList();
+        if (parts.length == 3) {
+          final h = double.parse(parts[0]);
+          final s = double.parse(parts[1].replaceAll('%', '')) / 100.0;
+          final l = double.parse(parts[2].replaceAll('%', '')) / 100.0;
+          return HSLColor.fromAHSL(1.0, h, s, l).toColor();
+        }
+      }
+
+      // Handle HEX formatting
+      final cleaned = str.replaceAll('#', '');
+      if (cleaned.length == 6) {
+        return Color(int.parse('FF$cleaned', radix: 16));
+      } else if (cleaned.length == 8) {
+        return Color(int.parse(cleaned, radix: 16));
+      }
+    } catch (_) {}
+    return const Color(0xFFF3F5E9); // fallback color
   }
 }
 

@@ -3,6 +3,8 @@ import 'package:grocery_app/core/theme/app_colors.dart';
 import 'package:grocery_app/core/services/banner_service.dart';
 import 'package:grocery_app/data/models/banner_model.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:grocery_app/core/services/cloudinary_service.dart';
+import 'package:grocery_app/core/utils/snackbar_service.dart';
 
 class AdminBannersTab extends StatefulWidget {
   const AdminBannersTab({super.key});
@@ -15,6 +17,7 @@ class _AdminBannersTabState extends State<AdminBannersTab> {
   final _service = BannerService.instance;
 
   void _showAddEditDialog({BannerModel? banner}) {
+    bool _isImageUploading = false;
     final titleCtrl = TextEditingController(text: banner?.title ?? '');
     final subtitleCtrl = TextEditingController(text: banner?.subtitle ?? '');
     final imageCtrl = TextEditingController(text: banner?.imageUrl ?? '');
@@ -42,51 +45,119 @@ class _AdminBannersTabState extends State<AdminBannersTab> {
               const SizedBox(height: 12),
               _dialogField(subtitleCtrl, 'Subtitle', Icons.subtitles),
               const SizedBox(height: 12),
-              _dialogField(imageCtrl, 'Image URL', Icons.image_outlined),
+              StatefulBuilder(builder: (ctx, setDialogState) {
+                return Row(
+                  children: [
+                    Expanded(
+                      child: _dialogField(imageCtrl, 'Image URL', Icons.image_outlined),
+                    ),
+                    const SizedBox(width: 8),
+                    Container(
+                      height: 52,
+                      width: 52,
+                      decoration: BoxDecoration(
+                        color: AppColors.primaryGreen.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: IconButton(
+                        onPressed: _isImageUploading ? null : () async {
+                            setDialogState(() => _isImageUploading = true);
+                            final url = await CloudinaryService.instance.pickAndUploadImage();
+                            if (url != null) {
+                              setDialogState(() => imageCtrl.text = url);
+                              if (ctx.mounted) SnackbarService.showSuccess(ctx, 'Image uploaded!');
+                            } else {
+                              if (ctx.mounted) SnackbarService.showError(ctx, 'Upload failed/canceled');
+                            }
+                            setDialogState(() => _isImageUploading = false);
+                        },
+                        icon: _isImageUploading 
+                              ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2)) 
+                              : const Icon(Icons.upload_file),
+                        color: AppColors.primaryGreen,
+                      ),
+                    ),
+                  ],
+                );
+              }),
               const SizedBox(height: 12),
               _dialogField(orderCtrl, 'Display Order', Icons.sort,
                   isNumber: true),
             ],
           ),
         ),
+        actionsPadding: const EdgeInsets.fromLTRB(24, 24, 24, 24),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(),
-            child: const Text('Cancel',
-                style: TextStyle(color: AppColors.greyText)),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              final title = titleCtrl.text.trim();
-              final subtitle = subtitleCtrl.text.trim();
-              final imageUrl = imageCtrl.text.trim();
-              final order = int.tryParse(orderCtrl.text.trim()) ?? 0;
-
-              if (title.isEmpty || imageUrl.isEmpty) return;
-
-              final newBanner = BannerModel(
-                id: banner?.id ?? '',
-                title: title,
-                subtitle: subtitle,
-                imageUrl: imageUrl,
-                order: order,
-              );
-
-              if (banner == null) {
-                await _service.addBanner(newBanner);
-              } else {
-                await _service.updateBanner(banner.id, newBanner.toMap());
-              }
-              if (ctx.mounted) Navigator.of(ctx).pop();
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.primaryGreen,
-              foregroundColor: AppColors.white,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton(
+                  onPressed: () => Navigator.of(ctx).pop(),
+                  style: OutlinedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    side: const BorderSide(color: AppColors.borderGrey),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  child: const Text(
+                    'Cancel',
+                    style: TextStyle(
+                      color: AppColors.darkText,
+                      fontWeight: FontWeight.w600,
+                      fontSize: 16,
+                    ),
+                  ),
+                ),
               ),
-            ),
-            child: Text(banner == null ? 'Add' : 'Save'),
+              const SizedBox(width: 12),
+              Expanded(
+                child: ElevatedButton(
+                  onPressed: () async {
+                    final title = titleCtrl.text.trim();
+                    final subtitle = subtitleCtrl.text.trim();
+                    final imageUrl = imageCtrl.text.trim();
+                    final order = int.tryParse(orderCtrl.text.trim()) ?? 0;
+
+                    if (title.isEmpty || imageUrl.isEmpty) return;
+
+                    final newBanner = BannerModel(
+                      id: banner?.id ?? '',
+                      title: title,
+                      subtitle: subtitle,
+                      imageUrl: imageUrl,
+                      order: order,
+                    );
+
+                    if (banner == null) {
+                      await _service.addBanner(newBanner);
+                    } else {
+                      if (banner.imageUrl != newBanner.imageUrl && banner.imageUrl.isNotEmpty) {
+                        await CloudinaryService.instance.deleteImageByUrl(banner.imageUrl);
+                      }
+                      await _service.updateBanner(banner.id, newBanner.toMap());
+                    }
+                    if (ctx.mounted) Navigator.of(ctx).pop();
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primaryGreen,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  child: Text(
+                    banner == null ? 'Add' : 'Save',
+                    style: const TextStyle(
+                      color: AppColors.white,
+                      fontWeight: FontWeight.w600,
+                      fontSize: 16,
+                    ),
+                  ),
+                ),
+              ),
+            ],
           ),
         ],
       ),
@@ -263,22 +334,65 @@ class _AdminBannersTabState extends State<AdminBannersTab> {
                     final confirm = await showDialog<bool>(
                       context: context,
                       builder: (ctx) => AlertDialog(
-                        title: const Text('Delete Banner?'),
-                        content: Text('Delete "${banner.title}"?'),
+                        title: const Text('Delete Banner?',
+                            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: AppColors.darkText)),
+                        contentPadding: const EdgeInsets.fromLTRB(24, 20, 24, 0),
+                        content: Text('Delete "${banner.title}"?', style: const TextStyle(fontSize: 16, color: AppColors.greyText)),
+                        actionsPadding: const EdgeInsets.fromLTRB(24, 24, 24, 24),
                         actions: [
-                          TextButton(
-                            onPressed: () => Navigator.of(ctx).pop(false),
-                            child: const Text('Cancel'),
-                          ),
-                          TextButton(
-                            onPressed: () => Navigator.of(ctx).pop(true),
-                            child: const Text('Delete',
-                                style: TextStyle(color: Colors.red)),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: OutlinedButton(
+                                  onPressed: () => Navigator.of(ctx).pop(false),
+                                  style: OutlinedButton.styleFrom(
+                                    padding: const EdgeInsets.symmetric(vertical: 16),
+                                    side: const BorderSide(color: AppColors.borderGrey),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                  ),
+                                  child: const Text(
+                                    'Cancel',
+                                    style: TextStyle(
+                                      color: AppColors.darkText,
+                                      fontWeight: FontWeight.w600,
+                                      fontSize: 16,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: ElevatedButton(
+                                  onPressed: () => Navigator.of(ctx).pop(true),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: const Color(0xFFF35B5B),
+                                    padding: const EdgeInsets.symmetric(vertical: 16),
+                                    elevation: 0,
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                  ),
+                                  child: const Text(
+                                    'Delete',
+                                    style: TextStyle(
+                                      color: AppColors.white,
+                                      fontWeight: FontWeight.w600,
+                                      fontSize: 16,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
                         ],
                       ),
                     );
                     if (confirm == true) {
+                      if (banner.imageUrl.isNotEmpty) {
+                        await CloudinaryService.instance.deleteImageByUrl(banner.imageUrl);
+                      }
                       await _service.deleteBanner(banner.id);
                     }
                   },

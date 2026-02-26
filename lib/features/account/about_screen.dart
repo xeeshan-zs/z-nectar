@@ -54,7 +54,7 @@ class AboutScreen extends StatelessWidget {
             ),
             const SizedBox(height: 20),
             const Text(
-              'Z-Nectar',
+              'Nectar',
               style: TextStyle(
                 fontSize: 28,
                 fontWeight: FontWeight.bold,
