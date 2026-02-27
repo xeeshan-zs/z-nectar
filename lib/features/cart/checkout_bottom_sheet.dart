@@ -14,6 +14,7 @@ import 'package:grocery_app/features/location/location_selection_screen.dart';
 import 'package:grocery_app/data/models/location_model.dart';
 import 'package:grocery_app/data/models/promo_model.dart';
 import 'package:grocery_app/core/services/promo_service.dart';
+import 'package:grocery_app/core/services/product_service.dart';
 
 class CheckoutBottomSheet extends StatefulWidget {
   final double totalCost;
@@ -45,16 +46,21 @@ class _CheckoutBottomSheetState extends State<CheckoutBottomSheet> {
   final List<String> _deliveryOptions = ['Delivery', 'Pickup'];
   final Map<String, String> _paymentOptions = {
     'cod': 'Cash on Delivery',
-    'card': 'Credit / Debit Card',
-    'jazzcash': 'JazzCash',
-    'easypaisa': 'EasyPaisa',
   };
 
-  double get _finalCost {
+  double get _subtotal {
     if (_appliedPromo != null) {
       return widget.totalCost * (1 - (_appliedPromo!.discountPercent / 100));
     }
     return widget.totalCost;
+  }
+
+  double get _deliveryFee {
+    return _deliveryMethod == 'Delivery' ? 50.0 : 0.0;
+  }
+
+  double get _finalCost {
+    return _subtotal + _deliveryFee;
   }
 
   Future<void> _placeOrder() async {
@@ -64,10 +70,71 @@ class _CheckoutBottomSheetState extends State<CheckoutBottomSheet> {
     setState(() => _isPlacingOrder = true);
 
     try {
+      // 1. Pre-Checkout Validation: Check if requested stock is still available
+      final requestedQty = {
+        for (final c in widget.cartItems) c.productId: c.qty
+      };
+      final insufficientStock =
+          await ProductService.instance.checkStockAvailability(requestedQty);
+
+      if (insufficientStock.isNotEmpty) {
+        if (!mounted) return;
+        setState(() => _isPlacingOrder = false);
+        // Find names of out-of-stock items for a friendly message
+        final oosNames = widget.cartItems
+            .where((c) => insufficientStock.containsKey(c.productId))
+            .map((c) => c.name)
+            .join(', ');
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+                'Sorry, the following items are out of stock or have insufficient quantity: $oosNames'),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 4),
+          ),
+        );
+        return; // Halt checkout
+      }
+
+      // 2. Address & Minimum Validation: Ensure user has selected an address for Delivery
+      String finalAddress = 'Store Pickup';
+      if (_deliveryMethod == 'Delivery') {
+        if (_subtotal < 200) {
+          if (!mounted) return;
+          setState(() => _isPlacingOrder = false);
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Minimum order amount for delivery is Rs 200.'),
+              backgroundColor: Colors.red,
+              duration: Duration(seconds: 3),
+            ),
+          );
+          return;
+        }
+
+        final loc = await LocationService.instance.getCurrentLocation().first;
+        if (loc == null || loc.address.isEmpty) {
+          if (!mounted) return;
+          setState(() => _isPlacingOrder = false);
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Please select a delivery address first.'),
+              backgroundColor: Colors.red,
+              duration: Duration(seconds: 3),
+            ),
+          );
+          return; // Halt checkout
+        }
+        finalAddress = loc.address;
+      }
+
+      // 3. Safe to proceed — create order
       final order = OrderModel(
         id: '',
         userId: user.uid,
         userEmail: user.email ?? '',
+        userName: user.displayName ?? 'Customer',
         items: widget.cartItems
             .map((c) => OrderItem(
                   productId: c.productId,
@@ -78,11 +145,19 @@ class _CheckoutBottomSheetState extends State<CheckoutBottomSheet> {
             .toList(),
         total: _finalCost,
         paymentMethod: _paymentMethod,
-        address: _deliveryMethod == 'Pickup' ? 'Store Pickup' : await _getSelectedAddress(),
+        address: finalAddress,
       );
 
       await OrderService.instance.placeOrder(order);
-      
+
+      // Decrement stock & increment sales for each ordered item
+      final productIdToQty = {
+        for (final c in widget.cartItems) c.productId: c.qty
+      };
+      await ProductService.instance.decrementStockCount(productIdToQty);
+      await ProductService.instance
+          .incrementSalesCount(widget.cartItems.map((e) => e.productId).toList());
+
       // Remove only the purchased items from the cart safely using a batch
       final productIds = widget.cartItems.map((e) => e.productId).toList();
       await CartService.instance.removeItemsFromCartBatch(user.uid, productIds);
@@ -215,8 +290,6 @@ class _CheckoutBottomSheetState extends State<CheckoutBottomSheet> {
             ),
             const Divider(),
 
-            const Divider(),
-
             // Promo Code
             _buildCheckoutRow(
               'Promo Code',
@@ -235,11 +308,16 @@ class _CheckoutBottomSheetState extends State<CheckoutBottomSheet> {
             ),
             const Divider(),
 
-            // Total Cost
+            // Total Cost calculations
             if (_appliedPromo != null)
               _buildCheckoutRow(
                 'Discount',
                 '-${_appliedPromo!.discountPercent.toInt()}%',
+              ),
+            if (_deliveryMethod == 'Delivery')
+              _buildCheckoutRow(
+                'Delivery Fee',
+                'Rs ${_deliveryFee.toStringAsFixed(2)}',
               ),
             _buildCheckoutRow(
               'Total Cost',
@@ -340,31 +418,15 @@ class _CheckoutBottomSheetState extends State<CheckoutBottomSheet> {
           mainAxisSize: MainAxisSize.min,
           children: _paymentOptions.entries.map((entry) {
             return ListTile(
-              leading: Icon(
-                entry.key == 'cod'
-                    ? Icons.money
-                    : entry.key == 'card'
-                        ? Icons.credit_card
-                        : Icons.phone_android,
-                color: AppColors.primaryGreen,
+              leading: const Icon(Icons.money, color: AppColors.primaryGreen),
+              title: Text(
+                entry.value,
+                style: const TextStyle(color: AppColors.darkText),
               ),
-              title: Text(entry.value),
               trailing: _paymentMethod == entry.key
                   ? const Icon(Icons.check, color: AppColors.primaryGreen)
                   : null,
               onTap: () {
-                if (entry.key != 'cod') {
-                  Navigator.pop(context);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text('${entry.value} coming soon!'),
-                      backgroundColor: AppColors.primaryGreen,
-                      behavior: SnackBarBehavior.floating,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                    ),
-                  );
-                  return;
-                }
                 setState(() => _paymentMethod = entry.key);
                 Navigator.pop(context);
               },

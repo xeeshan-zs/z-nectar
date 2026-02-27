@@ -3,13 +3,10 @@ import 'package:grocery_app/core/theme/app_colors.dart';
 import 'package:grocery_app/features/admin/admin_dashboard_screen.dart';
 import 'package:grocery_app/features/auth/signup_screen.dart';
 import 'package:grocery_app/features/dashboard/dashboard_screen.dart';
-
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:grocery_app/core/services/providers.dart';
 import 'package:grocery_app/core/utils/snackbar_service.dart';
 import 'package:cached_network_image/cached_network_image.dart';
-
-enum _LoginMethod { email, phone }
 
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
@@ -22,27 +19,21 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
   final _emailCtrl = TextEditingController();
   final _passwordCtrl = TextEditingController();
-  final _phoneCtrl = TextEditingController();
   bool _obscurePassword = true;
   bool _isLoading = false;
+  bool _socialLoading = false;
   String? _errorMessage;
-  _LoginMethod _method = _LoginMethod.email;
 
   @override
   void dispose() {
     _emailCtrl.dispose();
     _passwordCtrl.dispose();
-    _phoneCtrl.dispose();
     super.dispose();
   }
 
-  // ── Email/Password login ───────────────────────────────────────────────
   Future<void> _loginWithEmail() async {
     if (!_formKey.currentState!.validate()) return;
-    setState(() {
-      _isLoading = true;
-      _errorMessage = null;
-    });
+    setState(() { _isLoading = true; _errorMessage = null; });
     try {
       final cred = await ref.read(authServiceProvider).login(
         email: _emailCtrl.text.trim(),
@@ -57,201 +48,34 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     }
   }
 
-  // ── Phone OTP login ────────────────────────────────────────────────────
-  Future<void> _loginWithPhone() async {
-    if (!_formKey.currentState!.validate()) return;
-    setState(() {
-      _isLoading = true;
-      _errorMessage = null;
-    });
-
-    final phone = _phoneCtrl.text.trim();
-    final fullPhone = phone.startsWith('+') ? phone : '+92${phone.replaceFirst(RegExp(r'^0'), '')}';
-
-    await ref.read(authServiceProvider).sendPhoneOtp(
-      phoneNumber: fullPhone,
-      onError: (err) {
-        if (mounted) {
-          setState(() {
-            _isLoading = false;
-            _errorMessage = err;
-          });
-        }
-      },
-      onCodeSent: () {
-        if (mounted) {
-          setState(() => _isLoading = false);
-          _showOtpBottomSheet(fullPhone);
-        }
-      },
-    );
+  Future<void> _loginWithGoogle() async {
+    setState(() { _socialLoading = true; _errorMessage = null; });
+    try {
+      final cred = await ref.read(authServiceProvider).signInWithGoogle();
+      if (cred == null || !mounted) return;
+      await _routeByRole(cred.user!.uid,
+          email: cred.user!.email ?? cred.user!.uid);
+    } catch (e) {
+      if (mounted) setState(() => _errorMessage = 'Google sign-in failed. Try again.');
+    } finally {
+      if (mounted) setState(() => _socialLoading = false);
+    }
   }
 
-  // ── OTP Bottom Sheet ───────────────────────────────────────────────────
-  void _showOtpBottomSheet(String phoneNumber) {
-    final otpCtrls = List.generate(6, (_) => TextEditingController());
-    final focusNodes = List.generate(6, (_) => FocusNode());
-    bool verifying = false;
-    String? otpError;
-
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: AppColors.white,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      builder: (ctx) {
-        return StatefulBuilder(builder: (ctx, setSheetState) {
-          Future<void> verify() async {
-            final otp = otpCtrls.map((c) => c.text).join();
-            if (otp.length < 6) {
-              setSheetState(() => otpError = 'Enter all 6 digits');
-              return;
-            }
-            setSheetState(() {
-              verifying = true;
-              otpError = null;
-            });
-
-            try {
-              final nav = Navigator.of(ctx);
-              final cred = await ref.read(authServiceProvider).verifyPhoneOtp(otp);
-              if (cred?.user != null && mounted) {
-                nav.pop(); // close sheet
-                await _routeByRole(cred!.user!.uid,
-                    email: cred.user!.phoneNumber ?? phoneNumber);
-              } else {
-                setSheetState(() {
-                  verifying = false;
-                  otpError = 'Verification failed';
-                });
-              }
-            } catch (e) {
-              setSheetState(() {
-                verifying = false;
-                otpError = 'Invalid OTP. Try again.';
-              });
-            }
-          }
-
-          return Padding(
-            padding: EdgeInsets.fromLTRB(
-                24, 24, 24, MediaQuery.of(ctx).viewInsets.bottom + 24),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  width: 40,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: AppColors.borderGrey,
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
-                const SizedBox(height: 20),
-                const Text(
-                  'Enter OTP',
-                  style: TextStyle(
-                    fontSize: 22,
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.darkText,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  'Code sent to $phoneNumber',
-                  style: const TextStyle(
-                      fontSize: 14, color: AppColors.greyText),
-                ),
-                const SizedBox(height: 24),
-
-                // OTP Fields
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                  children: List.generate(6, (i) {
-                    return SizedBox(
-                      width: 44,
-                      height: 52,
-                      child: TextField(
-                        controller: otpCtrls[i],
-                        focusNode: focusNodes[i],
-                        keyboardType: TextInputType.number,
-                        textAlign: TextAlign.center,
-                        maxLength: 1,
-                        style: const TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold,
-                            color: AppColors.darkText),
-                        decoration: InputDecoration(
-                          counterText: '',
-                          filled: true,
-                          fillColor: AppColors.lightGrey,
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(10),
-                            borderSide: BorderSide.none,
-                          ),
-                          focusedBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(10),
-                            borderSide: const BorderSide(
-                                color: AppColors.primaryGreen, width: 1.5),
-                          ),
-                        ),
-                        onChanged: (val) {
-                          if (val.isNotEmpty && i < 5) {
-                            focusNodes[i + 1].requestFocus();
-                          } else if (val.isEmpty && i > 0) {
-                            focusNodes[i - 1].requestFocus();
-                          }
-                        },
-                      ),
-                    );
-                  }),
-                ),
-
-                if (otpError != null) ...[
-                  const SizedBox(height: 12),
-                  Text(otpError!,
-                      style: const TextStyle(
-                          color: Color(0xFFD32F2F), fontSize: 13)),
-                ],
-
-                const SizedBox(height: 24),
-
-                SizedBox(
-                  width: double.infinity,
-                  height: 56,
-                  child: ElevatedButton(
-                    onPressed: verifying ? null : verify,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.primaryGreen,
-                      foregroundColor: AppColors.white,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                      elevation: 0,
-                    ),
-                    child: verifying
-                        ? const SizedBox(
-                            width: 24,
-                            height: 24,
-                            child: CircularProgressIndicator(
-                                color: AppColors.white, strokeWidth: 2.5),
-                          )
-                        : const Text('Verify & Login',
-                            style: TextStyle(
-                                fontSize: 18, fontWeight: FontWeight.w600)),
-                  ),
-                ),
-              ],
-            ),
-          );
-        });
-      },
-    );
+  Future<void> _loginWithFacebook() async {
+    setState(() { _socialLoading = true; _errorMessage = null; });
+    try {
+      final cred = await ref.read(authServiceProvider).signInWithFacebook();
+      if (cred == null || !mounted) return;
+      await _routeByRole(cred.user!.uid,
+          email: cred.user!.email ?? cred.user!.uid);
+    } catch (e) {
+      if (mounted) setState(() => _errorMessage = 'Facebook sign-in failed. Try again.');
+    } finally {
+      if (mounted) setState(() => _socialLoading = false);
+    }
   }
 
-  // ── Route by role ──────────────────────────────────────────────────────
   Future<void> _routeByRole(String uid, {required String email}) async {
     await ref.read(userRoleServiceProvider).ensureUserDoc(uid: uid, email: email);
     final role = await ref.read(userRoleServiceProvider).getRole(uid);
@@ -267,8 +91,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   Future<void> _forgotPassword() async {
     final email = _emailCtrl.text.trim();
     if (email.isEmpty) {
-      setState(
-          () => _errorMessage = 'Enter your email first to reset password.');
+      setState(() => _errorMessage = 'Enter your email first to reset password.');
       return;
     }
     try {
@@ -281,21 +104,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   }
 
   String _friendlyError(String raw) {
-    if (raw.contains('user-not-found')) {
-      return 'No account found with this email.';
-    }
-    if (raw.contains('wrong-password')) {
-      return 'Incorrect password. Try again.';
-    }
-    if (raw.contains('invalid-email')) {
-      return 'Please enter a valid email address.';
-    }
-    if (raw.contains('invalid-credential')) {
-      return 'Incorrect email or password.';
-    }
-    if (raw.contains('network-request-failed')) {
-      return 'No internet connection.';
-    }
+    if (raw.contains('user-not-found')) return 'No account found with this email.';
+    if (raw.contains('wrong-password')) return 'Incorrect password. Try again.';
+    if (raw.contains('invalid-email')) return 'Please enter a valid email address.';
+    if (raw.contains('invalid-credential')) return 'Incorrect email or password.';
+    if (raw.contains('network-request-failed')) return 'No internet connection.';
     return 'Something went wrong. Please try again.';
   }
 
@@ -328,7 +141,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 ),
                 const SizedBox(height: 40),
 
-                // ── Header ────────────────────────────────────────────
                 const Text(
                   'Login',
                   style: TextStyle(
@@ -338,112 +150,71 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   ),
                 ),
                 const SizedBox(height: 8),
-                Text(
-                  _method == _LoginMethod.email
-                      ? 'Enter your email and password'
-                      : 'Enter your phone number',
-                  style: const TextStyle(
+                const Text(
+                  'Enter your email and password',
+                  style: TextStyle(
                     fontSize: 16,
                     color: AppColors.greyText,
                     fontWeight: FontWeight.w400,
                   ),
                 ),
-
                 const SizedBox(height: 30),
 
-                // ── Method Toggle ─────────────────────────────────────
-                Container(
-                  decoration: BoxDecoration(
-                    color: AppColors.lightGrey,
-                    borderRadius: BorderRadius.circular(14),
+                // ── Email ─────────────────────────────────────────────
+                _buildLabel('Email'),
+                const SizedBox(height: 8),
+                _buildTextField(
+                  controller: _emailCtrl,
+                  hint: 'example@email.com',
+                  keyboardType: TextInputType.emailAddress,
+                  validator: (v) {
+                    if (v == null || v.trim().isEmpty) return 'Email is required';
+                    if (!v.contains('@')) return 'Enter a valid email';
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 24),
+
+                // ── Password ──────────────────────────────────────────
+                _buildLabel('Password'),
+                const SizedBox(height: 8),
+                _buildTextField(
+                  controller: _passwordCtrl,
+                  hint: '••••••••',
+                  obscureText: _obscurePassword,
+                  suffixIcon: IconButton(
+                    icon: Icon(
+                      _obscurePassword
+                          ? Icons.visibility_off_outlined
+                          : Icons.visibility_outlined,
+                      color: AppColors.greyText,
+                    ),
+                    onPressed: () =>
+                        setState(() => _obscurePassword = !_obscurePassword),
                   ),
-                  child: Row(
-                    children: [
-                      _buildTab('Email', _LoginMethod.email),
-                      _buildTab('Phone', _LoginMethod.phone),
-                    ],
+                  validator: (v) {
+                    if (v == null || v.isEmpty) return 'Password is required';
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 12),
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: GestureDetector(
+                    onTap: _forgotPassword,
+                    child: const Text(
+                      'Forgot Password?',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.primaryGreen,
+                      ),
+                    ),
                   ),
                 ),
-
-                const SizedBox(height: 28),
-
-                // ── Conditional Fields ────────────────────────────────
-                if (_method == _LoginMethod.email) ...[
-                  _buildLabel('Email'),
-                  const SizedBox(height: 8),
-                  _buildTextField(
-                    controller: _emailCtrl,
-                    hint: 'example@email.com',
-                    keyboardType: TextInputType.emailAddress,
-                    validator: (v) {
-                      if (v == null || v.trim().isEmpty) {
-                        return 'Email is required';
-                      }
-                      if (!v.contains('@')) return 'Enter a valid email';
-                      return null;
-                    },
-                  ),
-                  const SizedBox(height: 24),
-                  _buildLabel('Password'),
-                  const SizedBox(height: 8),
-                  _buildTextField(
-                    controller: _passwordCtrl,
-                    hint: '••••••••',
-                    obscureText: _obscurePassword,
-                    suffixIcon: IconButton(
-                      icon: Icon(
-                        _obscurePassword
-                            ? Icons.visibility_off_outlined
-                            : Icons.visibility_outlined,
-                        color: AppColors.greyText,
-                      ),
-                      onPressed: () => setState(
-                          () => _obscurePassword = !_obscurePassword),
-                    ),
-                    validator: (v) {
-                      if (v == null || v.isEmpty) {
-                        return 'Password is required';
-                      }
-                      return null;
-                    },
-                  ),
-                  const SizedBox(height: 12),
-                  Align(
-                    alignment: Alignment.centerRight,
-                    child: GestureDetector(
-                      onTap: _forgotPassword,
-                      child: const Text(
-                        'Forgot Password?',
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600,
-                          color: AppColors.primaryGreen,
-                        ),
-                      ),
-                    ),
-                  ),
-                ] else ...[
-                  _buildLabel('Phone Number'),
-                  const SizedBox(height: 8),
-                  _buildTextField(
-                    controller: _phoneCtrl,
-                    hint: '+92 3XX XXXXXXX',
-                    keyboardType: TextInputType.phone,
-                    validator: (v) {
-                      if (v == null || v.trim().isEmpty) {
-                        return 'Phone number is required';
-                      }
-                      if (v.trim().length < 10) {
-                        return 'Enter a valid phone number';
-                      }
-                      return null;
-                    },
-                  ),
-                ],
-
                 const SizedBox(height: 30),
 
-                // ── Error Message ─────────────────────────────────────
+                // ── Error ─────────────────────────────────────────────
                 if (_errorMessage != null) ...[
                   Container(
                     width: double.infinity,
@@ -464,16 +235,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   const SizedBox(height: 20),
                 ],
 
-                // ── Login Button ──────────────────────────────────────
+                // ── Log In Button ─────────────────────────────────────
                 SizedBox(
                   width: double.infinity,
                   height: 67,
                   child: ElevatedButton(
-                    onPressed: _isLoading
-                        ? null
-                        : (_method == _LoginMethod.email
-                            ? _loginWithEmail
-                            : _loginWithPhone),
+                    onPressed: _isLoading || _socialLoading ? null : _loginWithEmail,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppColors.primaryGreen,
                       foregroundColor: AppColors.white,
@@ -491,16 +258,47 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                               strokeWidth: 2.5,
                             ),
                           )
-                        : Text(
-                            _method == _LoginMethod.email
-                                ? 'Log In'
-                                : 'Send OTP',
-                            style: const TextStyle(
+                        : const Text(
+                            'Log In',
+                            style: TextStyle(
                               fontSize: 18,
                               fontWeight: FontWeight.w600,
                               color: AppColors.white,
                             ),
                           ),
+                  ),
+                ),
+
+                const SizedBox(height: 24),
+
+                // ── Divider ───────────────────────────────────────────
+                Row(
+                  children: [
+                    Expanded(child: Divider(color: AppColors.borderGrey)),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      child: Text(
+                        'or continue with',
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: AppColors.greyText,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                    Expanded(child: Divider(color: AppColors.borderGrey)),
+                  ],
+                ),
+
+                const SizedBox(height: 20),
+
+                // ── Social Buttons ────────────────────────────────────
+                SizedBox(
+                  width: double.infinity,
+                  child: _buildSocialButton(
+                    label: 'Continue with Google',
+                    iconUrl: 'https://img.icons8.com/color/48/google-logo.png',
+                    onTap: _socialLoading ? null : _loginWithGoogle,
                   ),
                 ),
 
@@ -536,7 +334,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     ),
                   ],
                 ),
-
                 const SizedBox(height: 30),
               ],
             ),
@@ -546,34 +343,49 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     );
   }
 
-  // ── Toggle Tab ──────────────────────────────────────────────────────────
-  Widget _buildTab(String label, _LoginMethod method) {
-    final isActive = _method == method;
-    return Expanded(
-      child: GestureDetector(
-        onTap: () {
-          setState(() {
-            _method = method;
-            _errorMessage = null;
-          });
-        },
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 200),
-          padding: const EdgeInsets.symmetric(vertical: 12),
-          decoration: BoxDecoration(
-            color: isActive ? AppColors.primaryGreen : Colors.transparent,
-            borderRadius: BorderRadius.circular(14),
-          ),
-          child: Center(
-            child: Text(
-              label,
-              style: TextStyle(
-                fontSize: 15,
-                fontWeight: FontWeight.w600,
-                color: isActive ? AppColors.white : AppColors.greyText,
+  Widget _buildSocialButton({
+    required String label,
+    required String iconUrl,
+    VoidCallback? onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        height: 56,
+        decoration: BoxDecoration(
+          border: Border.all(color: AppColors.borderGrey, width: 1),
+          borderRadius: BorderRadius.circular(14),
+          color: AppColors.white,
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            if (_socialLoading)
+              const SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(
+                    color: AppColors.primaryGreen, strokeWidth: 2),
+              )
+            else ...[
+              CachedNetworkImage(
+                imageUrl: iconUrl,
+                width: 22,
+                height: 22,
+                errorWidget: (_, __, ___) =>
+                    const Icon(Icons.login, size: 22),
               ),
-            ),
-          ),
+              const SizedBox(width: 8),
+              Text(
+                label,
+                style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.darkText,
+                ),
+              ),
+            ],
+          ],
         ),
       ),
     );
@@ -616,8 +428,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         ),
         suffixIcon: suffixIcon,
         filled: false,
-        contentPadding:
-            const EdgeInsets.symmetric(horizontal: 0, vertical: 14),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 0, vertical: 14),
         border: const UnderlineInputBorder(
           borderSide: BorderSide(color: AppColors.borderGrey, width: 1),
         ),

@@ -1,13 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:grocery_app/core/theme/app_colors.dart';
 import 'package:grocery_app/features/auth/otp_screen.dart';
-
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:grocery_app/core/services/providers.dart';
 import 'package:grocery_app/core/utils/snackbar_service.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 
+// Kept for backwards compatibility with otp_screen.dart
 enum ContactMethod { email, phone }
+
 
 class SignupScreen extends ConsumerStatefulWidget {
   const SignupScreen({super.key});
@@ -18,14 +19,13 @@ class SignupScreen extends ConsumerStatefulWidget {
 
 class _SignupScreenState extends ConsumerState<SignupScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _contactCtrl = TextEditingController();
-  ContactMethod _method = ContactMethod.email;
+  final _emailCtrl = TextEditingController();
   bool _isLoading = false;
   String? _errorMessage;
 
   @override
   void dispose() {
-    _contactCtrl.dispose();
+    _emailCtrl.dispose();
     super.dispose();
   }
 
@@ -37,42 +37,19 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
     });
 
     try {
-      if (_method == ContactMethod.email) {
-        final email = _contactCtrl.text.trim();
-        final otp = ref.read(authServiceProvider).sendEmailOtp(email);
-        if (!mounted) return;
-        // In dev mode, show the OTP in a snackbar so you can test it
-        SnackbarService.showSuccess(context, 'Dev: Your OTP is $otp');
-        Navigator.of(context).push(
-          MaterialPageRoute(
-            builder: (_) => OtpScreen(
-              contactValue: email,
-              method: _method,
-            ),
+      final email = _emailCtrl.text.trim();
+      final otp = ref.read(authServiceProvider).sendEmailOtp(email);
+      if (!mounted) return;
+      // In dev mode, show the OTP in a snackbar so you can test it
+      SnackbarService.showSuccess(context, 'Dev: Your OTP is $otp');
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => OtpScreen(
+            contactValue: email,
+            method: ContactMethod.email,
           ),
-        );
-      } else {
-        // Phone OTP via Firebase
-        String phone = _contactCtrl.text.trim();
-        if (!phone.startsWith('+')) phone = '+92$phone'; // default country code
-        await ref.read(authServiceProvider).sendPhoneOtp(
-          phoneNumber: phone,
-          onError: (err) {
-            setState(() => _errorMessage = err);
-          },
-          onCodeSent: () {
-            if (!mounted) return;
-            Navigator.of(context).push(
-              MaterialPageRoute(
-                builder: (_) => OtpScreen(
-                  contactValue: phone,
-                  method: _method,
-                ),
-              ),
-            );
-          },
-        );
-      }
+        ),
+      );
     } catch (e) {
       setState(() => _errorMessage = 'Failed to send OTP. Please try again.');
     } finally {
@@ -88,7 +65,8 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
         backgroundColor: AppColors.white,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded, color: AppColors.darkText, size: 20),
+          icon: const Icon(Icons.arrow_back_ios_new_rounded,
+              color: AppColors.darkText, size: 20),
           onPressed: () => Navigator.of(context).pop(),
         ),
       ),
@@ -103,7 +81,8 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                 // ── Carrot Logo ───────────────────────────────────────
                 Center(
                   child: CachedNetworkImage(
-                    imageUrl: 'https://img.icons8.com/emoji/96/carrot-emoji.png',
+                    imageUrl:
+                        'https://img.icons8.com/emoji/96/carrot-emoji.png',
                     width: 50,
                     height: 50,
                     errorWidget: (_, __, ___) => const Icon(
@@ -126,7 +105,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                 ),
                 const SizedBox(height: 8),
                 const Text(
-                  'Enter your email or phone number',
+                  'Enter your email address to get started',
                   style: TextStyle(
                     fontSize: 16,
                     color: AppColors.greyText,
@@ -136,27 +115,10 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
 
                 const SizedBox(height: 36),
 
-                // ── Toggle Email / Phone ──────────────────────────────────
-                Container(
-                  height: 52,
-                  decoration: BoxDecoration(
-                    color: AppColors.lightGrey,
-                    borderRadius: BorderRadius.circular(14),
-                  ),
-                  child: Row(
-                    children: [
-                      _buildToggleTab('Email', ContactMethod.email),
-                      _buildToggleTab('Phone', ContactMethod.phone),
-                    ],
-                  ),
-                ),
-
-                const SizedBox(height: 28),
-
-                // ── Input Field ───────────────────────────────────────────
-                Text(
-                  _method == ContactMethod.email ? 'Email Address' : 'Phone Number',
-                  style: const TextStyle(
+                // ── Email Field ─────────────────────────────────────────
+                const Text(
+                  'Email Address',
+                  style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w600,
                     color: AppColors.greyText,
@@ -164,60 +126,50 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                 ),
                 const SizedBox(height: 8),
                 TextFormField(
-                  controller: _contactCtrl,
-                  keyboardType: _method == ContactMethod.email
-                      ? TextInputType.emailAddress
-                      : TextInputType.phone,
+                  controller: _emailCtrl,
+                  keyboardType: TextInputType.emailAddress,
                   style: const TextStyle(
                     fontSize: 15,
                     fontWeight: FontWeight.w500,
                     color: AppColors.darkText,
                   ),
-                  decoration: InputDecoration(
-                    hintText: _method == ContactMethod.email
-                        ? 'example@email.com'
-                        : '03XX XXXXXXX',
-                    hintStyle: const TextStyle(
+                  decoration: const InputDecoration(
+                    hintText: 'example@email.com',
+                    hintStyle: TextStyle(
                       color: AppColors.lightGreyText,
                       fontWeight: FontWeight.w400,
                     ),
-                    prefixIcon: Icon(
-                      _method == ContactMethod.email
-                          ? Icons.email_outlined
-                          : Icons.phone_outlined,
-                      color: AppColors.greyText,
-                      size: 20,
-                    ),
+                    prefixIcon: Icon(Icons.email_outlined,
+                        color: AppColors.greyText, size: 20),
                     filled: false,
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 0, vertical: 14),
-                    border: const UnderlineInputBorder(
-                      borderSide: BorderSide(color: AppColors.borderGrey, width: 1),
+                    contentPadding:
+                        EdgeInsets.symmetric(horizontal: 0, vertical: 14),
+                    border: UnderlineInputBorder(
+                      borderSide:
+                          BorderSide(color: AppColors.borderGrey, width: 1),
                     ),
-                    enabledBorder: const UnderlineInputBorder(
-                      borderSide: BorderSide(color: AppColors.borderGrey, width: 1),
+                    enabledBorder: UnderlineInputBorder(
+                      borderSide:
+                          BorderSide(color: AppColors.borderGrey, width: 1),
                     ),
-                    focusedBorder: const UnderlineInputBorder(
-                      borderSide: BorderSide(color: AppColors.primaryGreen, width: 1.5),
+                    focusedBorder: UnderlineInputBorder(
+                      borderSide: BorderSide(
+                          color: AppColors.primaryGreen, width: 1.5),
                     ),
-                    errorBorder: const UnderlineInputBorder(
-                      borderSide: BorderSide(color: Color(0xFFD32F2F), width: 1.5),
+                    errorBorder: UnderlineInputBorder(
+                      borderSide:
+                          BorderSide(color: Color(0xFFD32F2F), width: 1.5),
                     ),
-                    focusedErrorBorder: const UnderlineInputBorder(
-                      borderSide: BorderSide(color: Color(0xFFD32F2F), width: 1.5),
+                    focusedErrorBorder: UnderlineInputBorder(
+                      borderSide:
+                          BorderSide(color: Color(0xFFD32F2F), width: 1.5),
                     ),
                   ),
                   validator: (v) {
                     if (v == null || v.trim().isEmpty) {
-                      return _method == ContactMethod.email
-                          ? 'Email is required'
-                          : 'Phone number is required';
+                      return 'Email is required';
                     }
-                    if (_method == ContactMethod.email && !v.contains('@')) {
-                      return 'Enter a valid email address';
-                    }
-                    if (_method == ContactMethod.phone && v.trim().length < 10) {
-                      return 'Enter a valid phone number';
-                    }
+                    if (!v.contains('@')) return 'Enter a valid email address';
                     return null;
                   },
                 ),
@@ -231,16 +183,15 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                     color: AppColors.primaryGreen.withValues(alpha: 0.08),
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: Row(
+                  child: const Row(
                     children: [
-                      const Icon(Icons.info_outline, color: AppColors.primaryGreen, size: 18),
-                      const SizedBox(width: 10),
+                      Icon(Icons.info_outline,
+                          color: AppColors.primaryGreen, size: 18),
+                      SizedBox(width: 10),
                       Expanded(
                         child: Text(
-                          _method == ContactMethod.email
-                              ? 'We\'ll send a 6-digit OTP to your email.'
-                              : 'We\'ll send a 6-digit OTP via SMS.',
-                          style: const TextStyle(
+                          "We'll send a 6-digit OTP to your email.",
+                          style: TextStyle(
                             fontSize: 13,
                             color: AppColors.primaryGreen,
                             fontWeight: FontWeight.w500,
@@ -335,51 +286,8 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                     ),
                   ],
                 ),
-
                 const SizedBox(height: 30),
               ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildToggleTab(String label, ContactMethod method) {
-    final isSelected = _method == method;
-    return Expanded(
-      child: GestureDetector(
-        onTap: () {
-          setState(() {
-            _method = method;
-            _contactCtrl.clear();
-            _errorMessage = null;
-          });
-        },
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 200),
-          margin: const EdgeInsets.all(4),
-          decoration: BoxDecoration(
-            color: isSelected ? AppColors.white : Colors.transparent,
-            borderRadius: BorderRadius.circular(10),
-            boxShadow: isSelected
-                ? [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.08),
-                      blurRadius: 8,
-                      offset: const Offset(0, 2),
-                    ),
-                  ]
-                : [],
-          ),
-          child: Center(
-            child: Text(
-              label,
-              style: TextStyle(
-                fontSize: 15,
-                fontWeight: FontWeight.w600,
-                color: isSelected ? AppColors.primaryGreen : AppColors.greyText,
-              ),
             ),
           ),
         ),

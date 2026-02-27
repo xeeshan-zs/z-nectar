@@ -81,14 +81,34 @@ class ProductCard extends StatelessWidget {
               overflow: TextOverflow.ellipsis,
             ),
             const SizedBox(height: 5),
-            // Unit
-            Text(
-              product.unit,
-              style: const TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w500,
-                color: AppColors.greyText,
-              ),
+            // Star rating
+            Row(
+              children: [
+                ...List.generate(5, (i) {
+                  final full = i < product.rating.floor();
+                  final half = !full &&
+                      i < product.rating &&
+                      product.rating - product.rating.floor() >= 0.5;
+                  return Icon(
+                    full
+                        ? Icons.star
+                        : half
+                            ? Icons.star_half
+                            : Icons.star_border,
+                    color: Colors.amber,
+                    size: 14,
+                  );
+                }),
+                const SizedBox(width: 4),
+                Text(
+                  product.rating.toStringAsFixed(1),
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: AppColors.greyText,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
             ),
             const Spacer(),
             // Price & Add Button

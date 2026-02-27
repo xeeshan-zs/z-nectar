@@ -24,6 +24,7 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
   late final TextEditingController _priceCtrl;
   late final TextEditingController _unitCtrl;
   late final TextEditingController _nutritionCtrl;
+  late final TextEditingController _stockCountCtrl;
   late bool _inStock;
   late bool _isExclusive;
   late bool _isCarousel;
@@ -49,6 +50,10 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
     _unitCtrl = TextEditingController(text: p?.unit ?? '');
     _nutritionCtrl =
         TextEditingController(text: p?.nutritionWeight ?? '100gr');
+    _stockCountCtrl = TextEditingController(
+        text: (p?.stockCount != null && p!.stockCount < 999)
+            ? p.stockCount.toString()
+            : '');
     _inStock = p?.inStock ?? true;
     _isExclusive = p?.isExclusive ?? false;
     _isCarousel = p?.isCarousel ?? false;
@@ -90,6 +95,7 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
     _priceCtrl.dispose();
     _unitCtrl.dispose();
     _nutritionCtrl.dispose();
+    _stockCountCtrl.dispose();
     super.dispose();
   }
 
@@ -134,6 +140,7 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
       isCarousel: _isCarousel,
       isFeatured: _isFeatured,
       salesCount: widget.product?.salesCount ?? 0,
+      stockCount: int.tryParse(_stockCountCtrl.text.trim()) ?? 999,
     );
 
     try {
@@ -302,6 +309,15 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
                             _unitCtrl, 'Unit', Icons.straighten),
                       ),
                     ],
+                  ),
+                  const SizedBox(height: 14),
+                  _buildField(
+                    _stockCountCtrl,
+                    'Stock Count',
+                    Icons.inventory_2_outlined,
+                    isNumber: true,
+                    required: false,
+                    hint: 'Leave empty for unlimited',
                   ),
                   const SizedBox(height: 14),
                   _buildField(_nutritionCtrl, 'Nutrition Weight',
@@ -484,6 +500,8 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
     IconData icon, {
     int maxLines = 1,
     bool isNumber = false,
+    bool required = true,
+    String? hint,
   }) {
     return TextFormField(
       controller: controller,
@@ -495,6 +513,8 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
           color: AppColors.darkText),
       decoration: InputDecoration(
         labelText: label,
+        hintText: hint,
+        hintStyle: const TextStyle(color: AppColors.lightGreyText, fontSize: 13),
         labelStyle: const TextStyle(color: AppColors.greyText),
         prefixIcon: Icon(icon, color: AppColors.greyText, size: 20),
         filled: true,
@@ -510,10 +530,11 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
         ),
       ),
       validator: (val) {
-        if (val == null || val.trim().isEmpty) {
+        if (required && (val == null || val.trim().isEmpty)) {
           return '$label is required';
         }
-        if (isNumber && double.tryParse(val.trim()) == null) {
+        if (val != null && val.trim().isNotEmpty &&
+            isNumber && double.tryParse(val.trim()) == null) {
           return 'Enter a valid number';
         }
         return null;

@@ -76,15 +76,18 @@ class _CartScreenState extends State<CartScreen> {
             );
           }
 
-          // Filter out the unselected items to calculate total and prep for checkout
+          // Selected = not explicitly unselected AND in stock
           final selectedItems = items
-              .where((item) => !_unselectedItemIds.contains(item.id))
+              .where((item) =>
+                  !_unselectedItemIds.contains(item.id) && item.inStock)
               .toList();
 
           final totalCost = selectedItems.fold<double>(
               0, (sum, item) => sum + item.totalPrice);
-              
+
           final isAllSelected = items.every((item) => !_unselectedItemIds.contains(item.id));
+          final hasOutOfStockSelected = items.any(
+              (item) => !_unselectedItemIds.contains(item.id) && !item.inStock);
 
           return Column(
             children: [
@@ -158,11 +161,10 @@ class _CartScreenState extends State<CartScreen> {
                   top: false,
                   child: selectedItems.isEmpty
                       ? GreenButton(
-                          text: 'Select items to checkout',
+                          text: hasOutOfStockSelected
+                              ? 'Remove out-of-stock items to checkout'
+                              : 'Select items to checkout',
                           onPressed: () {},
-                          // Make it look disabled by adjusting button colors if needed,
-                          // but since GreenButton might not support it out of the box,
-                          // we just use a slightly faded opacity or let the user try and see it does nothing.
                         )
                       : InkWell(
                           onTap: () {
@@ -226,157 +228,189 @@ class _CartScreenState extends State<CartScreen> {
   Widget _buildCartItemTile(
       BuildContext context, CartItem item, String userId) {
     final isSelected = !_unselectedItemIds.contains(item.id);
+    final isOos = !item.inStock;
 
-    return Padding(
-      padding: const EdgeInsets.symmetric(
-          horizontal: AppConstants.horizontalPadding, vertical: 12),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          // Checkbox for selection
-          GestureDetector(
-            onTap: () {
-              setState(() {
-                if (isSelected) {
-                  _unselectedItemIds.add(item.id);
-                } else {
-                  _unselectedItemIds.remove(item.id);
-                }
-              });
-            },
-            child: Container(
-              margin: const EdgeInsets.only(right: 12),
-              width: 24,
-              height: 24,
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(6),
-                border: Border.all(
-                  color: isSelected
-                      ? AppColors.primaryGreen
-                      : AppColors.greyText.withValues(alpha: 0.5),
-                  width: 2,
+    return Opacity(
+      opacity: isOos ? 0.65 : 1.0,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(
+            horizontal: AppConstants.horizontalPadding, vertical: 12),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            // Checkbox (disabled for OOS)
+            GestureDetector(
+              onTap: isOos
+                  ? null
+                  : () {
+                      setState(() {
+                        if (isSelected) {
+                          _unselectedItemIds.add(item.id);
+                        } else {
+                          _unselectedItemIds.remove(item.id);
+                        }
+                      });
+                    },
+              child: Container(
+                margin: const EdgeInsets.only(right: 12),
+                width: 24,
+                height: 24,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(6),
+                  border: Border.all(
+                    color: isOos
+                        ? Colors.red.withValues(alpha: 0.4)
+                        : isSelected
+                            ? AppColors.primaryGreen
+                            : AppColors.greyText.withValues(alpha: 0.5),
+                    width: 2,
+                  ),
+                  color: isOos
+                      ? Colors.transparent
+                      : isSelected
+                          ? AppColors.primaryGreen
+                          : Colors.transparent,
                 ),
-                color: isSelected ? AppColors.primaryGreen : Colors.transparent,
+                child: isSelected && !isOos
+                    ? const Icon(Icons.check, size: 16, color: Colors.white)
+                    : null,
               ),
-              child: isSelected
-                  ? const Icon(Icons.check, size: 16, color: Colors.white)
-                  : null,
             ),
-          ),
-          // Product Image
-          CachedNetworkImage(
-            imageUrl: item.imageUrl,
-            width: 70,
-            height: 70,
-            fit: BoxFit.contain,
-            placeholder: (_, __) => Container(
-              width: 70,
-              height: 70,
-              color: AppColors.lightGrey,
-            ),
-            errorWidget: (_, __, ___) => Container(
-              width: 70,
-              height: 70,
-              color: AppColors.lightGrey,
-              child: const Icon(Icons.image_not_supported_outlined,
-                  color: AppColors.greyText, size: 28),
-            ),
-          ),
-          const SizedBox(width: 15),
-          // Details & Controls
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+            // Product Image with OOS overlay
+            Stack(
               children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Expanded(
-                      child: Text(
-                        item.name,
-                        style: const TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                            color: AppColors.darkText),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
+                CachedNetworkImage(
+                  imageUrl: item.imageUrl,
+                  width: 70,
+                  height: 70,
+                  fit: BoxFit.contain,
+                  placeholder: (_, __) => Container(
+                    width: 70, height: 70, color: AppColors.lightGrey),
+                  errorWidget: (_, __, ___) => Container(
+                    width: 70, height: 70, color: AppColors.lightGrey,
+                    child: const Icon(Icons.image_not_supported_outlined,
+                        color: AppColors.greyText, size: 28)),
+                ),
+                if (isOos)
+                  Positioned(
+                    bottom: 0,
+                    left: 0,
+                    right: 0,
+                    child: Container(
+                      color: Colors.red.withValues(alpha: 0.85),
+                      padding: const EdgeInsets.symmetric(vertical: 3),
+                      child: const Text(
+                        'Out of Stock',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 9,
+                            fontWeight: FontWeight.bold),
                       ),
                     ),
-                    GestureDetector(
-                      onTap: () {
-                        CartService.instance.removeFromCart(userId, item.id);
-                      },
-                      child: const Icon(Icons.close,
-                          color: AppColors.greyText, size: 20),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  item.unit,
-                  style: const TextStyle(
-                      fontSize: 14,
-                      color: AppColors.greyText,
-                      fontWeight: FontWeight.w500),
-                ),
-                const SizedBox(height: 10),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    // Quantity Controls
-                    Row(
-                      children: [
-                        _buildQtyButton(
-                          Icons.remove,
-                          () {
-                            CartService.instance
-                                .updateQty(userId, item.id, item.qty - 1);
-                          },
-                        ),
-                        Container(
-                          width: 45,
-                          alignment: Alignment.center,
-                          decoration: BoxDecoration(
-                            border: Border.all(
-                                color: AppColors.lightGrey, width: 1),
-                            borderRadius: BorderRadius.circular(17),
-                          ),
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 5, vertical: 6),
-                          child: Text(
-                            '${item.qty}',
-                            style: const TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w600,
-                                color: AppColors.darkText),
-                          ),
-                        ),
-                        _buildQtyButton(
-                          Icons.add,
-                          () {
-                            CartService.instance
-                                .updateQty(userId, item.id, item.qty + 1);
-                          },
-                        ),
-                      ],
-                    ),
-                    // Price
-                    Text(
-                      'Rs ${item.totalPrice.toStringAsFixed(2)}',
-                      style: const TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.darkText),
-                    ),
-                  ],
-                ),
+                  ),
               ],
             ),
-          ),
-        ],
+            const SizedBox(width: 15),
+            // Details & Controls
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Expanded(
+                        child: Text(
+                          item.name,
+                          style: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.darkText),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      GestureDetector(
+                        onTap: () {
+                          CartService.instance.removeFromCart(userId, item.id);
+                        },
+                        child: const Icon(Icons.close,
+                            color: AppColors.greyText, size: 20),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    item.unit,
+                    style: const TextStyle(
+                        fontSize: 14,
+                        color: AppColors.greyText,
+                        fontWeight: FontWeight.w500),
+                  ),
+                  const SizedBox(height: 10),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      // Quantity Controls (disabled for OOS)
+                      IgnorePointer(
+                        ignoring: isOos,
+                        child: Row(
+                          children: [
+                            _buildQtyButton(
+                              Icons.remove,
+                              () {
+                                CartService.instance
+                                    .updateQty(userId, item.id, item.qty - 1);
+                              },
+                            ),
+                            Container(
+                              width: 45,
+                              alignment: Alignment.center,
+                              decoration: BoxDecoration(
+                                border: Border.all(
+                                    color: AppColors.lightGrey, width: 1),
+                                borderRadius: BorderRadius.circular(17),
+                              ),
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 5, vertical: 6),
+                              child: Text(
+                                '${item.qty}',
+                                style: const TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w600,
+                                    color: AppColors.darkText),
+                              ),
+                            ),
+                            _buildQtyButton(
+                              Icons.add,
+                              () {
+                                CartService.instance
+                                    .updateQty(userId, item.id, item.qty + 1);
+                              },
+                            ),
+                          ],
+                        ),
+                      ),
+                      // Price
+                      Text(
+                        'Rs ${item.totalPrice.toStringAsFixed(2)}',
+                        style: const TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.darkText),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
+
 
   Widget _buildQtyButton(IconData icon, VoidCallback onTap) {
     return GestureDetector(

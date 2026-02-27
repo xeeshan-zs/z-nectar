@@ -9,7 +9,10 @@ import 'package:grocery_app/data/models/location_model.dart';
 import 'package:grocery_app/data/models/product_model.dart';
 import 'package:grocery_app/data/models/banner_model.dart';
 import 'package:grocery_app/features/location/location_selection_screen.dart';
+import 'package:grocery_app/features/search/search_screen.dart';
 import 'package:grocery_app/core/widgets/product_card.dart';
+import 'package:grocery_app/features/product_detail/product_detail_screen.dart';
+import 'package:grocery_app/features/home/all_products_screen.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -101,29 +104,7 @@ class _HomeScreenState extends State<HomeScreen> {
             Padding(
               padding: const EdgeInsets.symmetric(
                   horizontal: AppConstants.horizontalPadding),
-              child: Container(
-                height: 52,
-                decoration: BoxDecoration(
-                  color: AppColors.searchBarBg,
-                  borderRadius:
-                      BorderRadius.circular(AppConstants.searchBarRadius),
-                ),
-                child: const Row(
-                  children: [
-                    SizedBox(width: 16),
-                    Icon(Icons.search, color: AppColors.darkText, size: 22),
-                    SizedBox(width: 10),
-                    Text(
-                      'Search Store',
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: AppColors.greyText,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
+              child: const HomeSearchBar(),
             ),
             const SizedBox(height: 20),
 
@@ -136,7 +117,14 @@ class _HomeScreenState extends State<HomeScreen> {
             const SizedBox(height: 25),
 
             // ── Featured Products Section ─────────────────────────────────
-            _buildSectionHeader('Featured Products'),
+            _buildSectionHeader('Featured Products', onSeeAll: () {
+              Navigator.of(context).push(MaterialPageRoute(
+                builder: (_) => AllProductsScreen(
+                  title: 'Featured Products',
+                  streamProvider: () => ProductService.instance.getFeaturedProducts(),
+                ),
+              ));
+            }),
             const SizedBox(height: 16),
             StreamBuilder<List<ProductModel>>(
               stream: _featuredProductsStream,
@@ -169,7 +157,14 @@ class _HomeScreenState extends State<HomeScreen> {
             const SizedBox(height: 25),
 
             // ── Exclusive Offer Section (from Firestore) ─────────────────
-            _buildSectionHeader('Exclusive Offer'),
+            _buildSectionHeader('Exclusive Offer', onSeeAll: () {
+              Navigator.of(context).push(MaterialPageRoute(
+                builder: (_) => AllProductsScreen(
+                  title: 'Exclusive Offer',
+                  streamProvider: () => ProductService.instance.getExclusiveProducts(),
+                ),
+              ));
+            }),
             const SizedBox(height: 16),
             StreamBuilder<List<ProductModel>>(
               stream: _exclusiveProductsStream,
@@ -202,7 +197,14 @@ class _HomeScreenState extends State<HomeScreen> {
             const SizedBox(height: 25),
 
             // ── Best Selling Section (from Firestore) ────────────────────
-            _buildSectionHeader('Best Selling'),
+            _buildSectionHeader('Best Selling', onSeeAll: () {
+              Navigator.of(context).push(MaterialPageRoute(
+                builder: (_) => AllProductsScreen(
+                  title: 'Best Selling',
+                  streamProvider: () => ProductService.instance.getBestSellingProducts(),
+                ),
+              ));
+            }),
             const SizedBox(height: 16),
             StreamBuilder<List<ProductModel>>(
               stream: _bestSellingProductsStream,
@@ -369,7 +371,12 @@ class _HomeScreenState extends State<HomeScreen> {
                 items: products.map((product) {
                   return GestureDetector(
                     onTap: () {
-                      // Navigate to product detail if needed
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) =>
+                              ProductDetailScreen(product: product),
+                        ),
+                      );
                     },
                     child: Container(
                       width: double.infinity,
@@ -433,14 +440,6 @@ class _HomeScreenState extends State<HomeScreen> {
                                       color: AppColors.darkText,
                                     ),
                                   ),
-                                  const SizedBox(height: 6),
-                                  Text(
-                                    product.unit,
-                                    style: const TextStyle(
-                                      fontSize: 13,
-                                      color: AppColors.greyText,
-                                    ),
-                                  ),
                                   const SizedBox(height: 12),
                                   Text(
                                     'Rs ${product.price.toStringAsFixed(2)}',
@@ -468,7 +467,7 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildSectionHeader(String title) {
+  Widget _buildSectionHeader(String title, {VoidCallback? onSeeAll}) {
     return Padding(
       padding:
           const EdgeInsets.symmetric(horizontal: AppConstants.horizontalPadding),
@@ -484,13 +483,15 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           ),
           GestureDetector(
-            onTap: () {},
-            child: const Text(
+            onTap: onSeeAll,
+            child: Text(
               'See all',
               style: TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.w600,
-                color: AppColors.primaryGreen,
+                color: onSeeAll != null
+                    ? AppColors.primaryGreen
+                    : AppColors.greyText,
               ),
             ),
           ),

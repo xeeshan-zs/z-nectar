@@ -18,12 +18,15 @@ class PromoService {
       final batch = _db.batch();
       batch.set(userRef, {'welcome_promos_generated': true}, SetOptions(merge: true));
       
+      final now = DateTime.now();
+      
       batch.set(userRef.collection('my_promos').doc('welcome30'), {
         'code': 'WELCOME30',
         'title': '30% Off First Order',
         'description': 'Enjoy 30% off your very first order.',
         'discountPercent': 30,
         'used': false,
+        'expiryDate': Timestamp.fromDate(now.add(const Duration(days: 7))),
       });
       batch.set(userRef.collection('my_promos').doc('save5'), {
         'code': 'SAVE5',
@@ -31,6 +34,7 @@ class PromoService {
         'description': 'Take 5% off this order.',
         'discountPercent': 5,
         'used': false,
+        'expiryDate': Timestamp.fromDate(now.add(const Duration(days: 14))),
       });
       batch.set(userRef.collection('my_promos').doc('bonus5'), {
         'code': 'BONUS5',
@@ -38,6 +42,7 @@ class PromoService {
         'description': 'Take 5% off this order.',
         'discountPercent': 5,
         'used': false,
+        'expiryDate': Timestamp.fromDate(now.add(const Duration(days: 14))),
       });
       await batch.commit();
     }

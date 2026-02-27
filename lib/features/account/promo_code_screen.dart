@@ -246,8 +246,9 @@ class _PromoCodeScreenState extends ConsumerState<PromoCodeScreen> {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(
-                        // No expiryDate on standard PromoModel right this second, handling if we add it
-                        "No Expiry", 
+                        promo.expiryDate != null 
+                            ? 'Expires ${DateFormat('MMM dd, yyyy').format(promo.expiryDate!.toDate())}' 
+                            : 'No Expiry', 
                         style: TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.w600,

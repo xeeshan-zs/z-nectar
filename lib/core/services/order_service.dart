@@ -58,6 +58,36 @@ class OrderService {
     });
   }
 
+  /// One-shot fetch of orders for a specific user (no persistent listener)
+  Future<List<OrderModel>> getOrdersByUserOnce(String userId) async {
+    final snap = await _col.where('userId', isEqualTo: userId).get();
+    final list = snap.docs
+        .map((d) => OrderModel.fromMap(d.id, d.data()))
+        .toList();
+    list.sort((a, b) {
+      final aTime = a.createdAt?.millisecondsSinceEpoch ?? 0;
+      final bTime = b.createdAt?.millisecondsSinceEpoch ?? 0;
+      return bTime.compareTo(aTime); // newest first
+    });
+    return list;
+  }
+
+
+  /// Stream a single order by ID (real-time)
+  Stream<OrderModel?> getOrderById(String orderId) {
+    return _col.doc(orderId).snapshots().map((snap) {
+      if (!snap.exists) return null;
+      return OrderModel.fromMap(snap.id, snap.data()!);
+    });
+  }
+
+  /// One-shot fetch of a single order by ID
+  Future<OrderModel?> getOrderByIdOnce(String orderId) async {
+    final doc = await _col.doc(orderId).get();
+    if (!doc.exists) return null;
+    return OrderModel.fromMap(doc.id, doc.data()!);
+  }
+
   /// Update order status
   Future<void> updateStatus(String orderId, String newStatus) async {
     await _col.doc(orderId).update({

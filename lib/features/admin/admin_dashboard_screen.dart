@@ -7,6 +7,7 @@ import 'package:grocery_app/features/admin/admin_customers_tab.dart';
 import 'package:grocery_app/features/admin/admin_banners_tab.dart';
 import 'package:grocery_app/features/admin/admin_categories_tab.dart';
 import 'package:grocery_app/features/admin/admin_promos_tab.dart';
+import 'package:grocery_app/features/admin/admin_reviews_tab.dart';
 import 'package:grocery_app/features/auth/auth_service.dart';
 import 'package:grocery_app/features/auth/splash_screen.dart';
 
@@ -28,6 +29,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     'Banners',
     'Categories',
     'Promos',
+    'Reviews',
   ];
 
   final List<Widget> _tabs = const [
@@ -38,6 +40,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     AdminBannersTab(),
     AdminCategoriesTab(),
     AdminPromosTab(),
+    AdminReviewsTab(),
   ];
 
   @override
@@ -160,7 +163,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceAround,
-              children: List.generate(7, (i) {
+              children: List.generate(8, (i) {
                 final isActive = _currentIndex == i;
                 return _buildNavItem(i, isActive);
               }),
@@ -180,6 +183,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       Icons.view_carousel_outlined,
       Icons.category_outlined,
       Icons.local_offer_outlined,
+      Icons.rate_review_outlined,
     ];
     const activeIcons = [
       Icons.dashboard,
@@ -189,8 +193,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       Icons.view_carousel,
       Icons.category,
       Icons.local_offer,
+      Icons.rate_review,
     ];
-    const labels = ['Overview', 'Products', 'Orders', 'Customers', 'Banners', 'Categories', 'Promos'];
+    const labels = ['Overview', 'Products', 'Orders', 'Customers', 'Banners', 'Categories', 'Promos', 'Reviews'];
 
     return Expanded(
       child: GestureDetector(

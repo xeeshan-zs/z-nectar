@@ -38,6 +38,7 @@ class CartService {
         'price': product.price,
         'unit': product.unit,
         'qty': qty,
+        'inStock': product.inStock,
       });
     }
   }
@@ -75,9 +76,16 @@ class CartService {
     await batch.commit();
   }
 
-  /// Get cart item count (for badge)
+  /// Get cart item count (for badge) - sums up the qty of all items
   Stream<int> getCartItemCount(String userId) {
-    return _cartCol(userId).snapshots().map((snap) => snap.docs.length);
+    return _cartCol(userId).snapshots().map((snap) {
+      if (snap.docs.isEmpty) return 0;
+      return snap.docs.fold<int>(0, (sum, doc) {
+        final data = doc.data() as Map<String, dynamic>;
+        final qty = (data['qty'] as num?)?.toInt() ?? 1;
+        return sum + qty;
+      });
+    });
   }
 }
 
@@ -90,6 +98,7 @@ class CartItem {
   final double price;
   final String unit;
   int qty;
+  final bool inStock;
 
   CartItem({
     required this.id,
@@ -99,6 +108,7 @@ class CartItem {
     required this.price,
     required this.unit,
     required this.qty,
+    this.inStock = true,
   });
 
   factory CartItem.fromMap(String id, Map<String, dynamic> map) {
@@ -108,8 +118,9 @@ class CartItem {
       name: map['name'] as String? ?? '',
       imageUrl: map['imageUrl'] as String? ?? '',
       price: (map['price'] as num?)?.toDouble() ?? 0,
-      unit: map['unit'] as String? ?? '',
+      unit: map['unit']?.toString() ?? '',
       qty: (map['qty'] as num?)?.toInt() ?? 1,
+      inStock: map['inStock'] == null ? true : map['inStock'] as bool,
     );
   }
 

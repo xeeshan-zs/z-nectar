@@ -1,6 +1,7 @@
 import 'dart:math';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 
 class AuthService {
   AuthService._();
@@ -114,4 +115,42 @@ class AuthService {
   }
 
   String? get pendingEmail => _pendingEmail;
+
+  // ─── Google Sign-In ───────────────────────────────────────────────────────
+
+  Future<UserCredential?> signInWithGoogle() async {
+    try {
+      if (kIsWeb) {
+        final provider = GoogleAuthProvider();
+        return await _auth.signInWithPopup(provider);
+      } else {
+        final googleUser = await GoogleSignIn().signIn();
+        if (googleUser == null) return null;
+        final googleAuth = await googleUser.authentication;
+        final credential = GoogleAuthProvider.credential(
+          accessToken: googleAuth.accessToken,
+          idToken: googleAuth.idToken,
+        );
+        return await _auth.signInWithCredential(credential);
+      }
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  // ─── Facebook Sign-In ─────────────────────────────────────────────────────
+
+  Future<UserCredential?> signInWithFacebook() async {
+    try {
+      if (kIsWeb) {
+        final provider = FacebookAuthProvider();
+        return await _auth.signInWithPopup(provider);
+      }
+      // On mobile, a proper Facebook SDK integration is needed.
+      // For now, surface a clear error on non-web.
+      throw UnsupportedError('Facebook login on mobile requires the facebook_auth package.');
+    } catch (e) {
+      rethrow;
+    }
+  }
 }

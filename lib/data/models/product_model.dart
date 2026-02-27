@@ -13,6 +13,7 @@ class ProductModel {
   final bool isCarousel;
   final bool isFeatured;
   final int salesCount;
+  final int stockCount;
 
   const ProductModel({
     required this.id,
@@ -29,6 +30,7 @@ class ProductModel {
     this.isCarousel = false,
     this.isFeatured = false,
     this.salesCount = 0,
+    this.stockCount = 999,
   });
 
   factory ProductModel.fromMap(String id, Map<String, dynamic> map) {
@@ -42,11 +44,12 @@ class ProductModel {
       nutritionWeight: map['nutritionWeight'] as String? ?? '100gr',
       rating: (map['rating'] as num?)?.toDouble() ?? 5.0,
       categoryId: map['categoryId'] as String? ?? '',
-      inStock: map['inStock'] as bool? ?? true,
-      isExclusive: map['isExclusive'] as bool? ?? false,
-      isCarousel: map['isCarousel'] as bool? ?? false,
-      isFeatured: map['isFeatured'] as bool? ?? false,
+      inStock: map['inStock'] == null ? true : map['inStock'] as bool,
+      isExclusive: map['isExclusive'] == null ? false : map['isExclusive'] as bool,
+      isCarousel: map['isCarousel'] == null ? false : map['isCarousel'] as bool,
+      isFeatured: map['isFeatured'] == null ? false : map['isFeatured'] as bool,
       salesCount: (map['salesCount'] as num?)?.toInt() ?? 0,
+      stockCount: (map['stockCount'] as num?)?.toInt() ?? 999,
     );
   }
 
@@ -65,6 +68,7 @@ class ProductModel {
       'isCarousel': isCarousel,
       'isFeatured': isFeatured,
       'salesCount': salesCount,
+      'stockCount': stockCount,
     };
   }
 }

@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import 'package:grocery_app/core/theme/app_colors.dart';
 import 'package:grocery_app/core/constants/app_constants.dart';
@@ -6,6 +8,11 @@ import 'package:grocery_app/features/auth/splash_screen.dart';
 import 'package:grocery_app/features/location/location_selection_screen.dart';
 import 'package:grocery_app/features/order/order_history_screen.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 
 import 'my_details_screen.dart';
 import 'payment_methods_screen.dart';
@@ -14,14 +21,77 @@ import 'notifications_settings_screen.dart';
 import 'help_screen.dart';
 import 'about_screen.dart';
 
-class AccountScreen extends StatelessWidget {
+class AccountScreen extends StatefulWidget {
   const AccountScreen({super.key});
+
+  @override
+  State<AccountScreen> createState() => _AccountScreenState();
+}
+
+class _AccountScreenState extends State<AccountScreen> {
+  bool _uploadingPhoto = false;
+
+  Future<void> _pickAndUploadPhoto() async {
+    final picker = ImagePicker();
+    final picked = await picker.pickImage(
+      source: ImageSource.gallery,
+      maxWidth: 512,
+      maxHeight: 512,
+      imageQuality: 85,
+    );
+    if (picked == null) return;
+
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+
+    setState(() => _uploadingPhoto = true);
+    try {
+      final Uint8List bytes = await picked.readAsBytes();
+      final cloudName = dotenv.env['CLOUDINARY_CLOUD_NAME'] ?? '';
+      final uploadPreset = dotenv.env['CLOUDINARY_UPLOAD_PRESET'] ?? 'ml_default';
+
+      final uri =
+          Uri.parse('https://api.cloudinary.com/v1_1/$cloudName/image/upload');
+      final request = http.MultipartRequest('POST', uri)
+        ..fields['upload_preset'] = uploadPreset
+        ..fields['folder'] = 'profile_pictures'
+        ..files.add(http.MultipartFile.fromBytes(
+          'file',
+          bytes,
+          filename: '${user.uid}.jpg',
+        ));
+
+      final response = await request.send();
+      final body = await response.stream.bytesToString();
+      if (response.statusCode == 200) {
+        final json = jsonDecode(body);
+        final url = json['secure_url'] as String;
+        await user.updatePhotoURL(url);
+        await user.reload();
+        if (mounted) setState(() {});
+      } else {
+        throw Exception('Upload failed: ${response.statusCode}');
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to upload photo: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _uploadingPhoto = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     final user = AuthService.instance.currentUser;
     final displayName = user?.displayName ?? 'Grocery User';
-    final contactInfo = user?.email ?? user?.phoneNumber ?? 'Not available';
+    final contactInfo = user?.email ?? 'Not available';
+    final photoUrl = FirebaseAuth.instance.currentUser?.photoURL;
 
     return SafeArea(
       child: SingleChildScrollView(
@@ -34,28 +104,67 @@ class AccountScreen extends StatelessWidget {
                   horizontal: AppConstants.horizontalPadding),
               child: Row(
                 children: [
-                  // Avatar
-                  Container(
-                    width: 64,
-                    height: 64,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: AppColors.lightGrey,
-                      border: Border.all(color: AppColors.borderGrey, width: 1),
-                    ),
-                    child: user?.photoURL != null
-                        ? ClipOval(
-                            child: CachedNetworkImage(
-                              imageUrl: user!.photoURL!,
-                              fit: BoxFit.cover,
-                              errorWidget: (_, __, ___) => const Icon(
-                                  Icons.person,
-                                  color: AppColors.primaryGreen,
-                                  size: 35),
+                  // Avatar with upload tap
+                  GestureDetector(
+                    onTap: _uploadingPhoto ? null : _pickAndUploadPhoto,
+                    child: Stack(
+                      children: [
+                        Container(
+                          width: 72,
+                          height: 72,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: AppColors.lightGrey,
+                            border: Border.all(
+                                color: AppColors.primaryGreen, width: 2),
+                          ),
+                          child: _uploadingPhoto
+                              ? const Center(
+                                  child: SizedBox(
+                                    width: 28,
+                                    height: 28,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2.5,
+                                      color: AppColors.primaryGreen,
+                                    ),
+                                  ),
+                                )
+                              : photoUrl != null
+                                  ? ClipOval(
+                                      child: CachedNetworkImage(
+                                        imageUrl: photoUrl,
+                                        fit: BoxFit.cover,
+                                        width: 72,
+                                        height: 72,
+                                        errorWidget: (_, __, ___) =>
+                                            const Icon(Icons.person,
+                                                color:
+                                                    AppColors.primaryGreen,
+                                                size: 38),
+                                      ),
+                                    )
+                                  : const Icon(Icons.person,
+                                      color: AppColors.primaryGreen,
+                                      size: 38),
+                        ),
+                        // Camera badge
+                        if (!_uploadingPhoto)
+                          Positioned(
+                            right: 0,
+                            bottom: 0,
+                            child: Container(
+                              width: 24,
+                              height: 24,
+                              decoration: const BoxDecoration(
+                                color: AppColors.primaryGreen,
+                                shape: BoxShape.circle,
+                              ),
+                              child: const Icon(Icons.camera_alt,
+                                  color: Colors.white, size: 14),
                             ),
-                          )
-                        : const Icon(Icons.person,
-                            color: AppColors.primaryGreen, size: 35),
+                          ),
+                      ],
+                    ),
                   ),
                   const SizedBox(width: 18),
                   // Name & Email
@@ -104,16 +213,19 @@ class AccountScreen extends StatelessWidget {
             const Divider(),
             // Menu Items
             _buildOrdersMenuItem(context),
-            _buildMenuItem(context, Icons.badge_outlined, 'My Details', const MyDetailsScreen()),
-            _buildLocationMenuItem(context), // Special case for location
+            _buildMenuItem(context, Icons.badge_outlined, 'My Details',
+                const MyDetailsScreen()),
+            _buildLocationMenuItem(context),
+            _buildMenuItem(context, Icons.payment_outlined, 'Payment Methods',
+                const PaymentMethodsScreen()),
+            _buildMenuItem(context, Icons.local_offer_outlined, 'Promo Code',
+                const PromoCodeScreen()),
+            _buildMenuItem(context, Icons.notifications_outlined,
+                'Notifications', const NotificationsSettingsScreen()),
             _buildMenuItem(
-                context, Icons.payment_outlined, 'Payment Methods', const PaymentMethodsScreen()),
+                context, Icons.help_outline, 'Help', const HelpScreen()),
             _buildMenuItem(
-                context, Icons.local_offer_outlined, 'Promo Code', const PromoCodeScreen()),
-            _buildMenuItem(
-                context, Icons.notifications_outlined, 'Notifications', const NotificationsSettingsScreen()),
-            _buildMenuItem(context, Icons.help_outline, 'Help', const HelpScreen()),
-            _buildMenuItem(context, Icons.info_outline, 'About', const AboutScreen()),
+                context, Icons.info_outline, 'About', const AboutScreen()),
             const SizedBox(height: 30),
             // Log Out Button
             Padding(
@@ -135,8 +247,8 @@ class AccountScreen extends StatelessWidget {
                     ),
                   ),
                   style: OutlinedButton.styleFrom(
-                    side:
-                        const BorderSide(color: AppColors.lightGrey, width: 1),
+                    side: const BorderSide(
+                        color: AppColors.lightGrey, width: 1),
                     backgroundColor: AppColors.lightGrey,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(19),
@@ -168,7 +280,8 @@ class AccountScreen extends StatelessWidget {
                 horizontal: AppConstants.horizontalPadding, vertical: 16),
             child: Row(
               children: [
-                 Icon(Icons.location_on_outlined, color: AppColors.darkText, size: 24),
+                const Icon(Icons.location_on_outlined,
+                    color: AppColors.darkText, size: 24),
                 const SizedBox(width: 18),
                 const Expanded(
                   child: Text(
@@ -231,15 +344,14 @@ class AccountScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildMenuItem(BuildContext context, IconData icon, String title, Widget targetScreen) {
+  Widget _buildMenuItem(BuildContext context, IconData icon, String title,
+      Widget targetScreen) {
     return Column(
       children: [
         InkWell(
           onTap: () {
             Navigator.of(context).push(
-              MaterialPageRoute(
-                builder: (_) => targetScreen,
-              ),
+              MaterialPageRoute(builder: (_) => targetScreen),
             );
           },
           child: Padding(
@@ -279,7 +391,8 @@ class AccountScreen extends StatelessWidget {
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: AppColors.white,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        shape:
+            RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: const Text(
           'Edit Name',
           style: TextStyle(
@@ -312,8 +425,8 @@ class AccountScreen extends StatelessWidget {
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
-              borderSide:
-                  const BorderSide(color: AppColors.primaryGreen, width: 1.5),
+              borderSide: const BorderSide(
+                  color: AppColors.primaryGreen, width: 1.5),
             ),
           ),
         ),
@@ -349,16 +462,10 @@ class AccountScreen extends StatelessWidget {
                     if (name.isNotEmpty) {
                       await AuthService.instance.currentUser
                           ?.updateDisplayName(name);
-                      // Reload to pick up the change
                       await AuthService.instance.currentUser?.reload();
                     }
-                    if (ctx.mounted) {
-                      Navigator.of(ctx).pop();
-                    }
-                    // Force a rebuild of the parent to show the new name
-                    if (context.mounted) {
-                      (context as Element).markNeedsBuild();
-                    }
+                    if (ctx.mounted) Navigator.of(ctx).pop();
+                    if (mounted) setState(() {});
                   },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.primaryGreen,
@@ -390,7 +497,8 @@ class AccountScreen extends StatelessWidget {
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: AppColors.white,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        shape:
+            RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: const Text(
           'Log Out',
           style: TextStyle(
@@ -438,13 +546,14 @@ class AccountScreen extends StatelessWidget {
                     await AuthService.instance.logout();
                     if (context.mounted) {
                       Navigator.of(context).pushAndRemoveUntil(
-                        MaterialPageRoute(builder: (_) => const SplashScreen()),
+                        MaterialPageRoute(
+                            builder: (_) => const SplashScreen()),
                         (_) => false,
                       );
                     }
                   },
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFFF35B5B), // Soft Red
+                    backgroundColor: const Color(0xFFF35B5B),
                     padding: const EdgeInsets.symmetric(vertical: 16),
                     elevation: 0,
                     shape: RoundedRectangleBorder(

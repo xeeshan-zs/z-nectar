@@ -36,6 +36,7 @@ class OrderModel {
   final String id;
   final String userId;
   final String userEmail;
+  final String userName;
   final List<OrderItem> items;
   final double total;
   final String status; // pending, payment_verified, ready_for_delivery, delivered, cancelled
@@ -48,6 +49,7 @@ class OrderModel {
     required this.id,
     required this.userId,
     required this.userEmail,
+    required this.userName,
     required this.items,
     required this.total,
     this.status = 'pending',
@@ -62,6 +64,7 @@ class OrderModel {
       id: id,
       userId: map['userId'] as String? ?? '',
       userEmail: map['userEmail'] as String? ?? '',
+      userName: map['userName'] as String? ?? 'Customer',
       items: (map['items'] as List<dynamic>?)?.map((e) {
         if (e is Map) {
           return OrderItem.fromMap(Map<String, dynamic>.from(e));
@@ -89,6 +92,7 @@ class OrderModel {
     return {
       'userId': userId,
       'userEmail': userEmail,
+      'userName': userName,
       'items': items.map((e) => e.toMap()).toList(),
       'total': total,
       'status': status,

@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:grocery_app/core/theme/app_colors.dart';
 import 'package:grocery_app/core/services/order_service.dart';
+import 'package:grocery_app/core/services/product_service.dart';
 import 'package:grocery_app/data/models/order_model.dart';
+import 'package:grocery_app/features/order/order_detail_screen.dart';
 import 'package:intl/intl.dart';
 
 class OrderHistoryScreen extends StatefulWidget {
@@ -14,17 +16,15 @@ class OrderHistoryScreen extends StatefulWidget {
 
 class _OrderHistoryScreenState extends State<OrderHistoryScreen> {
   User? _currentUser;
-  late final Stream<List<OrderModel>> _ordersStream;
+  late Stream<List<OrderModel>> _ordersStream;
 
   @override
   void initState() {
     super.initState();
     _currentUser = FirebaseAuth.instance.currentUser;
-    if (_currentUser != null) {
-      _ordersStream = OrderService.instance.getOrdersByUser(_currentUser!.uid);
-    } else {
-      _ordersStream = const Stream.empty();
-    }
+    _ordersStream = _currentUser != null
+        ? OrderService.instance.getOrdersByUser(_currentUser!.uid)
+        : const Stream.empty();
   }
 
   @override
@@ -132,7 +132,14 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen> {
             .format(order.createdAt!.toDate())
         : 'N/A';
 
-    return Container(
+    return GestureDetector(
+      onTap: () => Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => OrderDetailScreen(orderId: order.id),
+        ),
+      ),
+      child: Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: AppColors.white,
@@ -324,6 +331,7 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen> {
 
                   if (confirm == true) {
                     await OrderService.instance.cancelOrder(order.id);
+                    await ProductService.instance.restoreStockCount(order.items);
                   }
                 },
                 style: OutlinedButton.styleFrom(
@@ -338,6 +346,7 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen> {
           ],
         ],
       ),
+    ),
     );
   }
 

@@ -8,6 +8,7 @@ class PromoModel {
   final double discountPercent;
   final bool used; // For user-specific promos
   final bool isGlobal; // To distinguish between global or user-specific
+  final Timestamp? expiryDate;
 
   PromoModel({
     required this.id,
@@ -17,6 +18,7 @@ class PromoModel {
     required this.discountPercent,
     this.used = false,
     this.isGlobal = false,
+    this.expiryDate,
   });
 
   factory PromoModel.fromMap(String id, Map<String, dynamic> map, {bool isGlobal = false}) {
@@ -28,6 +30,11 @@ class PromoModel {
       discountPercent: (map['discountPercent'] ?? 0).toDouble(),
       used: map['used'] ?? false,
       isGlobal: isGlobal,
+      expiryDate: map['expiryDate'] is Timestamp 
+          ? map['expiryDate'] as Timestamp 
+          : (map['expiryDate'] != null && map['expiryDate'].toString().isNotEmpty)
+              ? Timestamp.fromDate((map['expiryDate'] as dynamic).toDate())
+              : null,
     );
   }
 
@@ -37,6 +44,8 @@ class PromoModel {
       'title': title,
       'description': description,
       'discountPercent': discountPercent,
+      'used': used,
+      if (expiryDate != null) 'expiryDate': expiryDate,
     };
   }
 }

@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:grocery_app/core/theme/app_colors.dart';
 import 'package:grocery_app/core/services/order_service.dart';
 import 'package:grocery_app/core/services/product_service.dart';
-
+import 'package:grocery_app/features/admin/admin_order_detail_sheet.dart';
 import 'package:grocery_app/data/models/order_model.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
@@ -493,14 +493,14 @@ class _AdminOverviewTabState extends State<AdminOverviewTab> {
               ),
             ),
           ),
-          // Quick advance button
+          // Open detail sheet on arrow tap
           if (order.nextStatus != null) ...[
             const SizedBox(width: 6),
             GestureDetector(
-              onTap: () {
-                OrderService.instance
-                    .updateStatus(order.id, order.nextStatus!);
-                _loadStats();
+              onTap: () async {
+                final advanced =
+                    await showAdminOrderDetail(context, order);
+                if (advanced) _loadStats();
               },
               child: Container(
                 width: 28,

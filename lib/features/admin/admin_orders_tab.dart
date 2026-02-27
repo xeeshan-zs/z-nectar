@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:grocery_app/core/theme/app_colors.dart';
 import 'package:grocery_app/core/services/order_service.dart';
+import 'package:grocery_app/core/services/product_service.dart';
+import 'package:grocery_app/features/admin/admin_order_detail_sheet.dart';
 import 'package:grocery_app/data/models/order_model.dart';
 import 'package:intl/intl.dart';
 
@@ -188,7 +190,7 @@ class _AdminOrdersTabState extends State<AdminOrdersTab> {
           const SizedBox(height: 8),
           // Customer
           Text(
-            order.userEmail,
+            '${order.userName} (${order.userEmail})',
             style: const TextStyle(fontSize: 13, color: AppColors.greyText),
           ),
           const SizedBox(height: 6),
@@ -273,9 +275,9 @@ class _AdminOrdersTabState extends State<AdminOrdersTab> {
           // Actions
           Row(
             children: [
-              // View details
+              // View details — opens the shared order detail sheet
               OutlinedButton.icon(
-                onPressed: () => _showOrderDetail(context, order),
+                onPressed: () => showAdminOrderDetail(context, order),
                 icon: const Icon(Icons.visibility_outlined, size: 16),
                 label: const Text('Details', style: TextStyle(fontSize: 13)),
                 style: OutlinedButton.styleFrom(
@@ -287,11 +289,10 @@ class _AdminOrdersTabState extends State<AdminOrdersTab> {
                 ),
               ),
               const SizedBox(width: 8),
-              // Advance status
+              // Advance — also opens detail sheet (has the advance button inside)
               if (order.nextStatus != null)
                 TextButton.icon(
-                  onPressed: () => OrderService.instance
-                      .updateStatus(order.id, order.nextStatus!),
+                  onPressed: () => showAdminOrderDetail(context, order),
                   icon: const Icon(Icons.arrow_forward_rounded, size: 16),
                   label: Text(_nextActionLabel(order.status),
                       style: const TextStyle(fontSize: 13)),
@@ -349,10 +350,12 @@ class _AdminOrdersTabState extends State<AdminOrdersTab> {
                               const SizedBox(width: 12),
                               Expanded(
                                 child: ElevatedButton(
-                                  onPressed: () {
-                                    OrderService.instance
+                                  onPressed: () async {
+                                    await OrderService.instance
                                         .cancelOrder(order.id);
-                                    Navigator.of(ctx).pop();
+                                    await ProductService.instance
+                                        .restoreStockCount(order.items);
+                                    if (ctx.mounted) Navigator.of(ctx).pop();
                                   },
                                   style: ElevatedButton.styleFrom(
                                     backgroundColor: const Color(0xFFF35B5B),
@@ -386,274 +389,6 @@ class _AdminOrdersTabState extends State<AdminOrdersTab> {
     );
   }
 
-  void _showOrderDetail(BuildContext context, OrderModel order) {
-    final dateStr = order.createdAt != null
-        ? DateFormat('MMM dd, yyyy  hh:mm a')
-            .format(order.createdAt!.toDate())
-        : 'N/A';
-
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: AppColors.white,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (_) => DraggableScrollableSheet(
-        expand: false,
-        initialChildSize: 0.65,
-        maxChildSize: 0.9,
-        builder: (_, controller) => SingleChildScrollView(
-          controller: controller,
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Handle
-              Center(
-                child: Container(
-                  width: 40,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: AppColors.borderGrey,
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 18),
-              // Order header
-              Text(
-                'Order #${order.id.substring(0, 8).toUpperCase()}',
-                style: const TextStyle(
-                    fontSize: 20, fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 14),
-
-              // ── Status Timeline ────────────────────────────
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFF6F6F8),
-                  borderRadius: BorderRadius.circular(14),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text('Status Timeline',
-                        style: TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.bold,
-                            color: AppColors.darkText)),
-                    const SizedBox(height: 12),
-                    _buildTimelineStep(
-                      'Order Placed',
-                      _isStatusReached(order.status, 'pending'),
-                      Colors.orange,
-                      isFirst: true,
-                    ),
-                    _buildTimelineStep(
-                      'Payment Verified',
-                      _isStatusReached(
-                          order.status, 'payment_verified'),
-                      Colors.blue,
-                    ),
-                    _buildTimelineStep(
-                      'Ready for Delivery',
-                      _isStatusReached(
-                          order.status, 'ready_for_delivery'),
-                      Colors.teal,
-                    ),
-                    _buildTimelineStep(
-                      'Delivered',
-                      _isStatusReached(order.status, 'delivered'),
-                      AppColors.primaryGreen,
-                      isLast: true,
-                    ),
-                    if (order.status == 'cancelled')
-                      _buildTimelineStep(
-                        'Cancelled',
-                        true,
-                        Colors.red,
-                        isLast: true,
-                      ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 18),
-
-              // ── Info Section ────────────────────────────────
-              _detailRow(Icons.person_outline, 'Customer', order.userEmail),
-              _detailRow(Icons.schedule, 'Placed on', dateStr),
-              _detailRow(Icons.payment, 'Payment',
-                  order.paymentMethod.toUpperCase()),
-              if (order.address.isNotEmpty)
-                _detailRow(Icons.location_on_outlined, 'Address', order.address),
-              const SizedBox(height: 18),
-
-              // ── Items ───────────────────────────────────────
-              const Text('Items',
-                  style: TextStyle(
-                      fontSize: 16, fontWeight: FontWeight.bold)),
-              const SizedBox(height: 10),
-              ...order.items.map((item) => Container(
-                    margin: const EdgeInsets.only(bottom: 8),
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 14, vertical: 10),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFF6F6F8),
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment:
-                                CrossAxisAlignment.start,
-                            children: [
-                              Text(item.name,
-                                  style: const TextStyle(
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.w600)),
-                              Text('Qty: ${item.qty}',
-                                  style: const TextStyle(
-                                      fontSize: 12,
-                                      color: AppColors.greyText)),
-                            ],
-                          ),
-                        ),
-                        Text(
-                          'Rs ${(item.price * item.qty).toStringAsFixed(2)}',
-                          style: const TextStyle(
-                              fontWeight: FontWeight.bold, fontSize: 14),
-                        ),
-                      ],
-                    ),
-                  )),
-              const Divider(height: 24),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const Text('Total',
-                      style: TextStyle(
-                          fontSize: 18, fontWeight: FontWeight.bold)),
-                  Text('Rs ${order.total.toStringAsFixed(2)}',
-                      style: const TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.primaryGreen)),
-                ],
-              ),
-              const SizedBox(height: 16),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _detailRow(IconData icon, String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
-      child: Row(
-        children: [
-          Icon(icon, size: 18, color: AppColors.greyText),
-          const SizedBox(width: 10),
-          Text('$label: ',
-              style: const TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.darkText)),
-          Expanded(
-            child: Text(value,
-                style: const TextStyle(
-                    fontSize: 13, color: AppColors.greyText),
-                overflow: TextOverflow.ellipsis),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildTimelineStep(
-    String label,
-    bool reached,
-    Color color, {
-    bool isFirst = false,
-    bool isLast = false,
-  }) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        // Timeline column
-        SizedBox(
-          width: 24,
-          child: Column(
-            children: [
-              if (!isFirst)
-                Container(
-                  width: 2,
-                  height: 12,
-                  color: reached
-                      ? color
-                      : AppColors.borderGrey,
-                ),
-              Container(
-                width: 16,
-                height: 16,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: reached ? color : AppColors.white,
-                  border: Border.all(
-                    color: reached ? color : AppColors.borderGrey,
-                    width: 2,
-                  ),
-                ),
-                child: reached
-                    ? const Icon(Icons.check, size: 10, color: Colors.white)
-                    : null,
-              ),
-              if (!isLast)
-                Container(
-                  width: 2,
-                  height: 12,
-                  color: reached
-                      ? color.withValues(alpha: 0.3)
-                      : AppColors.borderGrey,
-                ),
-            ],
-          ),
-        ),
-        const SizedBox(width: 10),
-        // Label
-        Padding(
-          padding: EdgeInsets.only(top: isFirst ? 0 : 10),
-          child: Text(
-            label,
-            style: TextStyle(
-              fontSize: 13,
-              fontWeight: reached ? FontWeight.w600 : FontWeight.w400,
-              color: reached ? color : AppColors.greyText,
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  bool _isStatusReached(String currentStatus, String checkStatus) {
-    const pipeline = [
-      'pending',
-      'payment_verified',
-      'ready_for_delivery',
-      'delivered',
-    ];
-    final currentIdx = pipeline.indexOf(currentStatus);
-    final checkIdx = pipeline.indexOf(checkStatus);
-    if (currentIdx < 0 || checkIdx < 0) return false;
-    return currentIdx >= checkIdx;
-  }
-
   Color _getStatusColor(String status) {
     switch (status) {
       case 'pending':
@@ -680,7 +415,7 @@ class _AdminOrdersTabState extends State<AdminOrdersTab> {
       case 'ready_for_delivery':
         return 'Mark Delivered';
       default:
-        return '';
+        return 'Advance';
     }
   }
 }

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:grocery_app/core/theme/app_colors.dart';
 import 'package:grocery_app/core/constants/app_constants.dart';
 import 'package:grocery_app/core/widgets/green_button.dart';
+import 'package:grocery_app/features/order/order_history_screen.dart';
 
 class OrderSuccessScreen extends StatelessWidget {
   const OrderSuccessScreen({super.key});
@@ -83,7 +84,13 @@ class OrderSuccessScreen extends StatelessWidget {
               // Track Order Button
               GreenButton(
                 text: 'Track Order',
-                onPressed: () {},
+                onPressed: () {
+                  Navigator.pushReplacement(
+                    context,
+                    MaterialPageRoute(
+                        builder: (_) => const OrderHistoryScreen()),
+                  );
+                },
               ),
               const SizedBox(height: 15),
               // Back to home

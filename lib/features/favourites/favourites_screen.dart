@@ -146,12 +146,20 @@ class _FavouritesScreenState extends State<FavouritesScreen> {
                           child: GreenButton(
                             text: 'Add All To Cart',
                             onPressed: () async {
-                              for (final p in favourites) {
+                              final inStockFavs = favourites
+                                  .where((p) => p.inStock)
+                                  .toList();
+                              for (final p in inStockFavs) {
                                 await CartService.instance
                                     .addToCart(_currentUser!.uid, p);
                               }
                               if (context.mounted) {
-                                SnackbarService.showSuccess(context, 'All favourites added to cart!');
+                                final skipped =
+                                    favourites.length - inStockFavs.length;
+                                final msg = skipped > 0
+                                    ? 'Added ${inStockFavs.length} item(s) to cart ($skipped out of stock)'
+                                    : 'All favourites added to cart!';
+                                SnackbarService.showSuccess(context, msg);
                               }
                             },
                           ),
@@ -191,23 +199,38 @@ class _FavouriteItemTile extends StatelessWidget {
             horizontal: AppConstants.horizontalPadding, vertical: 10),
         child: Row(
           children: [
-            CachedNetworkImage(
-              imageUrl: product.imageUrl,
-              width: 60,
-              height: 60,
-              fit: BoxFit.contain,
-              placeholder: (_, __) => Container(
-                width: 60,
-                height: 60,
-                color: AppColors.lightGrey,
-              ),
-              errorWidget: (_, __, ___) => Container(
-                width: 60,
-                height: 60,
-                color: AppColors.lightGrey,
-                child: const Icon(Icons.image_not_supported_outlined,
-                    color: AppColors.greyText),
-              ),
+            // Image with OOS overlay
+            Stack(
+              children: [
+                CachedNetworkImage(
+                  imageUrl: product.imageUrl,
+                  width: 60,
+                  height: 60,
+                  fit: BoxFit.contain,
+                  placeholder: (_, __) => Container(
+                    width: 60, height: 60, color: AppColors.lightGrey),
+                  errorWidget: (_, __, ___) => Container(
+                    width: 60, height: 60, color: AppColors.lightGrey,
+                    child: const Icon(Icons.image_not_supported_outlined,
+                        color: AppColors.greyText)),
+                ),
+                if (!product.inStock)
+                  Positioned(
+                    bottom: 0, left: 0, right: 0,
+                    child: Container(
+                      color: Colors.red.withValues(alpha: 0.85),
+                      padding: const EdgeInsets.symmetric(vertical: 2),
+                      child: const Text(
+                        'Out of Stock',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 8,
+                            fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                  ),
+              ],
             ),
             const SizedBox(width: 20),
             Expanded(
@@ -222,14 +245,6 @@ class _FavouriteItemTile extends StatelessWidget {
                         color: AppColors.darkText),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    product.unit,
-                    style: const TextStyle(
-                        fontSize: 14,
-                        color: AppColors.greyText,
-                        fontWeight: FontWeight.w500),
                   ),
                 ],
               ),
