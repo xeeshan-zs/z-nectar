@@ -4,6 +4,7 @@ import 'package:grocery_app/core/constants/app_constants.dart';
 import 'package:grocery_app/core/widgets/green_button.dart';
 import 'package:grocery_app/features/auth/auth_service.dart';
 import 'package:grocery_app/core/utils/snackbar_service.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class MyDetailsScreen extends StatefulWidget {
   const MyDetailsScreen({super.key});
@@ -24,6 +25,27 @@ class _MyDetailsScreenState extends State<MyDetailsScreen> {
     _nameCtrl.text = user?.displayName ?? '';
     _emailCtrl.text = user?.email ?? '';
     _phoneCtrl.text = user?.phoneNumber ?? '';
+    _loadFirestoreData();
+  }
+
+  Future<void> _loadFirestoreData() async {
+    final user = AuthService.instance.currentUser;
+    if (user != null) {
+      final doc = await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
+      if (doc.exists && mounted) {
+        final data = doc.data()!;
+        if (data['phoneNumber'] != null && data['phoneNumber'].toString().isNotEmpty) {
+          setState(() {
+            _phoneCtrl.text = data['phoneNumber'];
+          });
+        }
+        if (data['name'] != null && _nameCtrl.text.isEmpty) {
+          setState(() {
+            _nameCtrl.text = data['name'];
+          });
+        }
+      }
+    }
   }
 
   @override
@@ -74,6 +96,11 @@ class _MyDetailsScreenState extends State<MyDetailsScreen> {
                 final user = AuthService.instance.currentUser;
                 if (user != null) {
                   await user.updateDisplayName(_nameCtrl.text.trim());
+                  await FirebaseFirestore.instance.collection('users').doc(user.uid).set({
+                    'name': _nameCtrl.text.trim(),
+                    'phoneNumber': _phoneCtrl.text.trim(),
+                    'email': user.email,
+                  }, SetOptions(merge: true));
                   await user.reload();
                   if (context.mounted) {
                     SnackbarService.showSuccess(context, 'Details updated!');

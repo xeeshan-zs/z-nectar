@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:grocery_app/core/theme/app_colors.dart';
 import 'package:grocery_app/core/constants/app_constants.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class NotificationsSettingsScreen extends StatefulWidget {
   const NotificationsSettingsScreen({super.key});
@@ -16,6 +18,45 @@ class _NotificationsSettingsScreenState
   bool _emailEnabled = false;
   bool _smsPromoEnabled = true;
   bool _orderUpdatesEnabled = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadPreferences();
+  }
+
+  Future<void> _loadPreferences() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      final doc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .collection('preferences')
+          .doc('notifications')
+          .get();
+      if (doc.exists && mounted) {
+        final data = doc.data()!;
+        setState(() {
+          _pushEnabled = data['push'] ?? true;
+          _orderUpdatesEnabled = data['orderUpdates'] ?? true;
+          _emailEnabled = data['email'] ?? false;
+          _smsPromoEnabled = data['smsPromo'] ?? true;
+        });
+      }
+    }
+  }
+
+  Future<void> _savePreference(String key, bool value) async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .collection('preferences')
+          .doc('notifications')
+          .set({key: value}, SetOptions(merge: true));
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -46,28 +87,40 @@ class _NotificationsSettingsScreenState
             'Push Notifications',
             'Receive alerts on your device',
             _pushEnabled,
-            (val) => setState(() => _pushEnabled = val),
+            (val) {
+              setState(() => _pushEnabled = val);
+              _savePreference('push', val);
+            },
           ),
           const Divider(),
           _buildToggle(
             'Order Updates',
             'Get notified about your order status',
             _orderUpdatesEnabled,
-            (val) => setState(() => _orderUpdatesEnabled = val),
+            (val) {
+              setState(() => _orderUpdatesEnabled = val);
+              _savePreference('orderUpdates', val);
+            },
           ),
           const Divider(),
           _buildToggle(
             'Email Alerts',
             'Receive newsletters and offers via email',
             _emailEnabled,
-            (val) => setState(() => _emailEnabled = val),
+            (val) {
+              setState(() => _emailEnabled = val);
+              _savePreference('email', val);
+            },
           ),
           const Divider(),
           _buildToggle(
             'SMS Promotional',
             'Get exclusive discount codes via SMS',
             _smsPromoEnabled,
-            (val) => setState(() => _smsPromoEnabled = val),
+            (val) {
+              setState(() => _smsPromoEnabled = val);
+              _savePreference('smsPromo', val);
+            },
           ),
         ],
       ),

@@ -6,6 +6,11 @@ import 'package:grocery_app/core/services/review_service.dart';
 import 'package:grocery_app/data/models/order_model.dart';
 import 'package:grocery_app/data/models/review_model.dart';
 import 'package:intl/intl.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:grocery_app/data/models/product_model.dart';
+import 'package:grocery_app/core/services/cart_service.dart';
+import 'package:grocery_app/core/utils/snackbar_service.dart';
+import 'package:grocery_app/core/services/support_service.dart';
 
 class OrderDetailScreen extends StatefulWidget {
   final String orderId;
@@ -245,8 +250,39 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                   ],
                 ),
 
+                const SizedBox(height: 24),
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton.icon(
+                    onPressed: () => _reorder(context, order),
+                    icon: const Icon(Icons.refresh, color: AppColors.primaryGreen),
+                    label: const Text('Reorder Items', style: TextStyle(color: AppColors.primaryGreen, fontWeight: FontWeight.bold)),
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      side: const BorderSide(color: AppColors.primaryGreen),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                  ),
+                ),
+
                 // ── Review section (only for delivered orders) ──
                 if (isDelivered) ...[
+                  const SizedBox(height: 24),
+                  
+                  // Report Issue Button
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton.icon(
+                      onPressed: () => _showSupportBottomSheet(context, order.id),
+                      icon: const Icon(Icons.help_outline, color: AppColors.darkText),
+                      label: const Text('Report an Issue', style: TextStyle(color: AppColors.darkText, fontWeight: FontWeight.bold)),
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                    ),
+                  ),
+                  
                   const SizedBox(height: 32),
                   const Text(
                     'Rate Your Products',
@@ -274,6 +310,121 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
           );
         },
       ),
+    );
+  }
+
+  void _reorder(BuildContext context, OrderModel order) async {
+    final currentUser = FirebaseAuth.instance.currentUser;
+    if (currentUser == null) return;
+    
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => const Center(child: CircularProgressIndicator(color: AppColors.primaryGreen)),
+    );
+
+    try {
+      for (final item in order.items) {
+        final doc = await FirebaseFirestore.instance.collection('products').doc(item.productId).get();
+        if (doc.exists) {
+           final product = ProductModel.fromMap(doc.id, doc.data()!);
+           await CartService.instance.addToCart(currentUser.uid, product, qty: item.qty);
+        }
+      }
+      if (context.mounted) {
+        Navigator.pop(context); // close dialog
+        SnackbarService.showSuccess(context, 'Items added to cart!');
+      }
+    } catch (e) {
+      if (context.mounted) {
+        Navigator.pop(context); // close dialog
+        SnackbarService.showError(context, 'Failed to reorder');
+      }
+    }
+  }
+
+  void _showSupportBottomSheet(BuildContext context, String orderId) {
+    final msgCtrl = TextEditingController();
+    
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) {
+        bool submitting = false;
+        
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return Container(
+              padding: EdgeInsets.only(
+                left: 20, right: 20, top: 20,
+                bottom: MediaQuery.of(ctx).viewInsets.bottom + 20,
+              ),
+              decoration: const BoxDecoration(
+                color: AppColors.white,
+                borderRadius: BorderRadius.only(topLeft: Radius.circular(20), topRight: Radius.circular(20)),
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('Report an Issue', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: AppColors.darkText)),
+                  const SizedBox(height: 8),
+                  const Text('Describe the problem with your order. We will look into it and get back to you soon.', style: TextStyle(fontSize: 14, color: AppColors.greyText)),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: msgCtrl,
+                    maxLines: 4,
+                    decoration: InputDecoration(
+                      hintText: 'E.g., Missing items, damaged goods, etc.',
+                      hintStyle: const TextStyle(fontSize: 14, color: AppColors.greyText),
+                      filled: true,
+                      fillColor: AppColors.lightGrey,
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: submitting ? null : () async {
+                        if (msgCtrl.text.trim().isEmpty) return;
+                        setState(() => submitting = true);
+                        try {
+                          final user = FirebaseAuth.instance.currentUser;
+                          if (user != null) {
+                            await SupportService.instance.submitTicket(
+                              orderId: orderId,
+                              userId: user.uid,
+                              message: msgCtrl.text.trim(),
+                            );
+                            if (ctx.mounted) {
+                              Navigator.pop(ctx);
+                              SnackbarService.showSuccess(ctx, 'Ticket submitted successfully');
+                            }
+                          }
+                        } finally {
+                          if (ctx.mounted) {
+                            setState(() => submitting = false);
+                          }
+                        }
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primaryGreen,
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                      child: submitting 
+                          ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                          : const Text('Submit Ticket', style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
     );
   }
 }

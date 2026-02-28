@@ -105,25 +105,33 @@ class _CartScreenState extends State<CartScreen> {
                           color: AppColors.darkText),
                     ),
                     if (items.isNotEmpty)
-                      TextButton(
-                        onPressed: () {
-                          setState(() {
-                            if (isAllSelected) {
-                              // Unselect all
-                              _unselectedItemIds.addAll(items.map((e) => e.id));
-                            } else {
-                              // Select all
-                              _unselectedItemIds.clear();
-                            }
-                          });
-                        },
-                        child: Text(
-                          isAllSelected ? 'Deselect All' : 'Select All',
-                          style: const TextStyle(
-                            color: AppColors.primaryGreen,
-                            fontWeight: FontWeight.bold,
+                      Row(
+                        children: [
+                          TextButton(
+                            onPressed: () {
+                              setState(() {
+                                if (isAllSelected) {
+                                  // Unselect all
+                                  _unselectedItemIds.addAll(items.map((e) => e.id));
+                                } else {
+                                  // Select all
+                                  _unselectedItemIds.clear();
+                                }
+                              });
+                            },
+                            child: Text(
+                              isAllSelected ? 'Deselect All' : 'Select All',
+                              style: const TextStyle(
+                                color: AppColors.primaryGreen,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
                           ),
-                        ),
+                          IconButton(
+                            onPressed: () => _showClearCartConfirmDialog(context, _currentUser!.uid),
+                            icon: const Icon(Icons.delete_outline, color: Colors.red),
+                          ),
+                        ],
                       ),
                   ],
                 ),
@@ -423,6 +431,29 @@ class _CartScreenState extends State<CartScreen> {
           borderRadius: BorderRadius.circular(17),
         ),
         child: Icon(icon, color: AppColors.primaryGreen, size: 22),
+      ),
+    );
+  }
+
+  void _showClearCartConfirmDialog(BuildContext context, String userId) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Clear Cart'),
+        content: const Text('Are you sure you want to remove all items from your cart?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel', style: TextStyle(color: AppColors.greyText)),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(ctx);
+              CartService.instance.clearCart(userId);
+            },
+            child: const Text('Clear', style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
+          ),
+        ],
       ),
     );
   }

@@ -47,3 +47,5 @@ pubspec.lock
 
 # Antigravity Agents
 .agents/
+
+android/jdk17/

@@ -6,6 +6,10 @@ import 'package:grocery_app/core/services/product_service.dart';
 import 'package:grocery_app/data/models/order_model.dart';
 import 'package:grocery_app/features/order/order_detail_screen.dart';
 import 'package:intl/intl.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:grocery_app/data/models/product_model.dart';
+import 'package:grocery_app/core/services/cart_service.dart';
+import 'package:grocery_app/core/utils/snackbar_service.dart';
 
 class OrderHistoryScreen extends StatefulWidget {
   const OrderHistoryScreen({super.key});
@@ -344,10 +348,52 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen> {
               ),
             ),
           ],
+          const SizedBox(height: 12),
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton.icon(
+              onPressed: () => _reorder(context, order),
+              icon: const Icon(Icons.refresh, color: AppColors.primaryGreen),
+              label: const Text('Reorder', style: TextStyle(color: AppColors.primaryGreen, fontWeight: FontWeight.bold)),
+              style: OutlinedButton.styleFrom(
+                side: const BorderSide(color: AppColors.primaryGreen),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+            ),
+          ),
         ],
       ),
     ),
     );
+  }
+
+  void _reorder(BuildContext context, OrderModel order) async {
+    if (_currentUser == null) return;
+    
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => const Center(child: CircularProgressIndicator(color: AppColors.primaryGreen)),
+    );
+
+    try {
+      for (final item in order.items) {
+        final doc = await FirebaseFirestore.instance.collection('products').doc(item.productId).get();
+        if (doc.exists) {
+           final product = ProductModel.fromMap(doc.id, doc.data()!);
+           await CartService.instance.addToCart(_currentUser!.uid, product, qty: item.qty);
+        }
+      }
+      if (context.mounted) {
+        Navigator.pop(context); // close dialog
+        SnackbarService.showSuccess(context, 'Items added to cart!');
+      }
+    } catch (e) {
+      if (context.mounted) {
+        Navigator.pop(context); // close dialog
+        SnackbarService.showError(context, 'Failed to reorder');
+      }
+    }
   }
 
   Color _getStatusColor(String status) {
